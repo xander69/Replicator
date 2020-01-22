@@ -2,7 +2,6 @@ package ru.xander.replicator;
 
 import ru.xander.replicator.exception.ReplicatorException;
 import ru.xander.replicator.listener.Alter;
-import ru.xander.replicator.listener.DummyListener;
 import ru.xander.replicator.listener.ReplicatorListener;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
@@ -36,7 +35,7 @@ public class Replicator {
     private final Set<String> droppedTables;
 
     public Replicator(Schema source, Schema target) {
-        this(source, target, DummyListener.getInstance());
+        this(source, target, ReplicatorListener.stub);
     }
 
     public Replicator(Schema source, Schema target, ReplicatorListener listener) {
@@ -44,7 +43,7 @@ public class Replicator {
         Objects.requireNonNull(target);
         this.source = source;
         this.target = target;
-        this.listener = listener == null ? DummyListener.getInstance() : listener;
+        this.listener = listener == null ? ReplicatorListener.stub : listener;
         this.createdTables = new HashSet<>();
         this.droppedTables = new HashSet<>();
     }

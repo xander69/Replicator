@@ -1,5 +1,7 @@
 package ru.xander.replicator;
 
+import ru.xander.replicator.listener.SchemaListener;
+
 public class SchemaOptionsFactory {
     public static SchemaOptions createSourceOracle() {
         SchemaOptions schemaOptions = new SchemaOptions();
@@ -8,6 +10,7 @@ public class SchemaOptionsFactory {
         schemaOptions.setUsername("scott");
         schemaOptions.setPassword("scott");
         schemaOptions.setWorkSchema("scott");
+        schemaOptions.setListener(SchemaListener.stdout);
         return schemaOptions;
     }
 
@@ -18,6 +21,7 @@ public class SchemaOptionsFactory {
         schemaOptions.setUsername("tiger");
         schemaOptions.setPassword("tiger");
         schemaOptions.setWorkSchema("tiger");
+        schemaOptions.setListener(SchemaListener.stdout);
         return schemaOptions;
     }
 }

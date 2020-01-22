@@ -1,5 +1,7 @@
 package ru.xander.replicator;
 
+import ru.xander.replicator.listener.SchemaListener;
+
 public class SchemaOptions {
 
     private String jdbcDriver;
@@ -7,6 +9,7 @@ public class SchemaOptions {
     private String username;
     private String password;
     private String workSchema;
+    private SchemaListener listener;
 
     public String getJdbcDriver() {
         return jdbcDriver;
@@ -46,5 +49,13 @@ public class SchemaOptions {
 
     public void setWorkSchema(String workSchema) {
         this.workSchema = workSchema;
+    }
+
+    public SchemaListener getListener() {
+        return listener;
+    }
+
+    public void setListener(SchemaListener listener) {
+        this.listener = listener;
     }
 }

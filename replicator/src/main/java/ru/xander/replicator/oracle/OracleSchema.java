@@ -2,6 +2,7 @@ package ru.xander.replicator.oracle;
 
 import ru.xander.replicator.SchemaOptions;
 import ru.xander.replicator.exception.SchemaException;
+import ru.xander.replicator.listener.SchemaListener;
 import ru.xander.replicator.schema.AbstractSchema;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
@@ -28,12 +29,14 @@ public class OracleSchema extends AbstractSchema {
     private final String workSchema;
     private final OracleDialect dialect;
     private final Map<String, Table> cache;
+    private final SchemaListener listener;
 
     public OracleSchema(SchemaOptions options) {
         super(options);
         this.workSchema = options.getWorkSchema();
         this.dialect = new OracleDialect();
         this.cache = new HashMap<>();
+        this.listener = options.getListener() == null ? SchemaListener.stub : options.getListener();
     }
 
     @Override
@@ -61,21 +64,25 @@ public class OracleSchema extends AbstractSchema {
 
     @Override
     public void createTable(Table table) {
+        listener.event("Create table " + table.getName());
         execute(dialect.createTableQuery(table));
     }
 
     @Override
     public void dropTable(Table table) {
+        listener.event("Drop table " + table.getName());
         execute(dialect.dropTableQuery(table));
     }
 
     @Override
     public void createTableComment(Table table) {
+        listener.event("Create comment for table " + table.getName());
         execute(dialect.createTableCommentQuery(table));
     }
 
     @Override
     public void createColumn(Column column) {
+        listener.event("Create column " + column.getName());
         execute(dialect.createColumnQuery(column));
     }
 
@@ -83,97 +90,116 @@ public class OracleSchema extends AbstractSchema {
     public void modifyColumn(Column column, ModifyType... modifyTypes) {
         String ddl = dialect.modifyColumnQuery(column, modifyTypes);
         if (ddl != null) {
+            listener.event("Modify column " + column.getName() + " " + Arrays.toString(modifyTypes));
             execute(ddl);
         }
     }
 
     @Override
     public void dropColumn(Column column) {
+        listener.event("Drop column " + column.getName());
         execute(dialect.dropColumnQuery(column));
     }
 
     @Override
     public void createColumnComment(Column column) {
+        listener.event("Create comment for column " + column.getName());
         execute(dialect.createColumnCommentQuery(column));
     }
 
     @Override
     public void createPrimaryKey(PrimaryKey primaryKey) {
+        listener.event("Create primary key " + primaryKey.getName());
         execute(dialect.createPrimaryKeyQuery(primaryKey));
     }
 
     @Override
     public void dropPrimaryKey(PrimaryKey primaryKey) {
+        listener.event("Drop primary key " + primaryKey.getName());
         execute(dialect.dropPrimaryKeyQuery(primaryKey));
     }
 
     @Override
     public void createImportedKey(ImportedKey importedKey) {
+        listener.event("Create imported key " + importedKey.getName());
         execute(dialect.createImportedKeyQuery(importedKey));
     }
 
     @Override
     public void createCheckConstraint(CheckConstraint checkConstraint) {
+        listener.event("Create check constraint " + checkConstraint.getName());
         execute(dialect.createCheckConstraintQuery(checkConstraint));
     }
 
     @Override
     public void dropConstraint(Constraint constraint) {
+        listener.event("Drop constraint " + constraint.getName());
         execute(dialect.dropConstraintQuery(constraint));
     }
 
     @Override
     public void toggleConstraint(Constraint constraint, boolean enabled) {
+        listener.event((enabled ? "Enable" : "Disable") + " constraint " + constraint.getName());
         execute(dialect.toggleConstraintQuery(constraint, enabled));
     }
 
     @Override
     public void createIndex(Index index) {
+        listener.event("Create index " + index.getName());
         execute(dialect.createIndexQuery(index));
     }
 
     @Override
     public void dropIndex(Index index) {
+        listener.event("Drop index " + index.getName());
         execute(dialect.dropIndexQuery(index));
     }
 
     @Override
     public void toggleIndex(Index index, boolean enabled) {
+        listener.event((enabled ? "Enable" : "Disable") + " index " + index.getName());
         execute(dialect.toggleIndexQuery(index, enabled));
     }
 
     @Override
     public void createTrigger(Trigger trigger) {
+        listener.event("Create trigger " + trigger.getName());
         execute(dialect.createTriggerQuery(trigger));
     }
 
     @Override
     public void dropTrigger(Trigger trigger) {
+        listener.event("Drop trigger " + trigger.getName());
         execute(dialect.dropTriggerQuery(trigger));
     }
 
     @Override
     public void toggleTrigger(Trigger trigger, boolean enabled) {
+        listener.event((enabled ? "Enable" : "Disable") + " trigger " + trigger.getName());
         execute(dialect.toggleTriggerQuery(trigger, enabled));
     }
 
     @Override
     public void createSequence(Sequence sequence) {
+        listener.event("Create sequence " + sequence.getName());
         execute(dialect.createSequenceQuery(sequence));
     }
 
     @Override
     public void dropSequence(Sequence sequence) {
+        listener.event("Drop sequence " + sequence.getName());
         execute(dialect.dropSequenceQuery(sequence));
     }
 
     @Override
     public void analyzeTable(Table table) {
+        listener.event("Analyze table " + table.getName());
         execute(dialect.analyzeTableQuery(table));
     }
 
     @Override
     public Ddl getDdl(Table table) {
+        listener.event("Get DDL for table " + table.getName());
         Ddl ddl = new Ddl();
         ddl.setTable(dialect.createTableQuery(table));
         if (table.getPrimaryKey() != null) {
@@ -191,6 +217,7 @@ public class OracleSchema extends AbstractSchema {
 
     @Override
     public Dml getDml(Table table) {
+        listener.event("Get DML for table " + table.getName());
         try {
             String selectQuery = dialect.selectQuery(table);
             return new Dml(
@@ -210,6 +237,7 @@ public class OracleSchema extends AbstractSchema {
     }
 
     private Table findTable(String tableName) {
+        listener.event("Find table " + tableName);
         return selectOne("select\n" +
                         "  t.owner,\n" +
                         "  t.table_name,\n" +
@@ -232,6 +260,7 @@ public class OracleSchema extends AbstractSchema {
     }
 
     private void findColumns(Table table) {
+        listener.event("Find columns for " + table.getName());
         select("select\n" +
                         "  c.owner,\n" +
                         "  c.table_name,\n" +
@@ -295,6 +324,7 @@ public class OracleSchema extends AbstractSchema {
     }
 
     private void findConstraints(Table table) {
+        listener.event("Find constraints for " + table.getName());
         select("select\n" +
                         "  c.owner,\n" +
                         "  c.table_name,\n" +
@@ -397,6 +427,7 @@ public class OracleSchema extends AbstractSchema {
     }
 
     private void findIndices(Table table) {
+        listener.event("Find indices for " + table.getName());
         select("select\n" +
                         "  i.owner,\n" +
                         "  i.index_name,\n" +
@@ -444,6 +475,7 @@ public class OracleSchema extends AbstractSchema {
     }
 
     private void findTriggers(Table table) {
+        listener.event("Find trigger for " + table.getName());
         select("select t.owner,\n" +
                         "  t.trigger_name,\n" +
                         "  t.trigger_type,\n" +
@@ -465,6 +497,7 @@ public class OracleSchema extends AbstractSchema {
     }
 
     private void findSequence(Table table) {
+        listener.event("Find sequence for " + table.getName());
         table.setSequence(selectOne("select\n" +
                         "  s.sequence_owner,\n" +
                         "  s.sequence_name,\n" +
