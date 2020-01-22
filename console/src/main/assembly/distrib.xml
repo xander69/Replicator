@@ -1,0 +1,23 @@
+<assembly>
+    <id>distrib</id>
+    <formats>
+        <format>dir</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <dependencySets>
+        <dependencySet>
+            <useProjectArtifact>true</useProjectArtifact>
+            <outputDirectory>lib</outputDirectory>
+            <unpack>false</unpack>
+        </dependencySet>
+    </dependencySets>
+    <fileSets>
+        <fileSet>
+            <directory>src/main/script</directory>
+            <outputDirectory></outputDirectory>
+            <includes>
+                <include>*.*</include>
+            </includes>
+        </fileSet>
+    </fileSets>
+</assembly>

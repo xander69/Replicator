@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>replicator</artifactId>
-    <name>ru.xander.replicator:replicator</name>
+    <name>replicator</name>
     <packaging>jar</packaging>
 
     <dependencies>
