@@ -1,7 +1,6 @@
 package ru.xander.replicator;
 
 import org.junit.Test;
-import ru.xander.replicator.oracle.OracleSchema;
 
 public class ReplicatorTest {
 
@@ -15,9 +14,9 @@ public class ReplicatorTest {
 
     @Test
     public void dump() {
-        Schema source = new OracleSchema(SchemaOptionsFactory.createSourceOracle());
-        Schema target = new OracleSchema(SchemaOptionsFactory.createTargetOracle());
+        Schema source = SchemaFactory.create(SchemaOptionsFactory.createSourceOracle());
+        Schema target = SchemaFactory.create(SchemaOptionsFactory.createTargetOracle());
         Replicator replicator = new Replicator(source, target, new TestReplicatorListener());
-        replicator.dump("D_EB_KD", System.out);
+        replicator.dump("FX_RS_TYPEREPORT", System.out, new DumpOptions());
     }
 }

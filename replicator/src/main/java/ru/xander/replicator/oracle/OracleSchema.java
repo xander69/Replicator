@@ -1,12 +1,14 @@
 package ru.xander.replicator.oracle;
 
-import ru.xander.replicator.AbstractSchema;
 import ru.xander.replicator.SchemaOptions;
+import ru.xander.replicator.exception.SchemaException;
+import ru.xander.replicator.schema.AbstractSchema;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnType;
 import ru.xander.replicator.schema.Constraint;
 import ru.xander.replicator.schema.Ddl;
+import ru.xander.replicator.schema.Dml;
 import ru.xander.replicator.schema.ExportedKey;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
@@ -55,23 +57,6 @@ public class OracleSchema extends AbstractSchema {
         findSequence(table);
         cache.put(tableName, table);
         return table;
-    }
-
-    @Override
-    public Ddl getDdl(Table table) {
-        Ddl ddl = new Ddl();
-        ddl.setTable(dialect.createTableQuery(table));
-        if (table.getPrimaryKey() != null) {
-            ddl.addConstraints(dialect.createPrimaryKeyQuery(table.getPrimaryKey()));
-        }
-        table.getImportedKeys().forEach(importedKey -> ddl.addConstraints(dialect.createImportedKeyQuery(importedKey)));
-        table.getCheckConstraints().forEach(checkConstraint -> ddl.addConstraints(dialect.createCheckConstraintQuery(checkConstraint)));
-        table.getIndices().forEach(index -> ddl.addIndex(dialect.createIndexQuery(index)));
-        table.getTriggers().forEach(trigger -> ddl.addTrigger(dialect.createTriggerQuery(trigger)));
-        if (table.getSequence() != null) {
-            ddl.setSequence(dialect.createSequenceQuery(table.getSequence()));
-        }
-        return ddl;
     }
 
     @Override
@@ -187,6 +172,43 @@ public class OracleSchema extends AbstractSchema {
         execute(dialect.analyzeTableQuery(table));
     }
 
+    @Override
+    public Ddl getDdl(Table table) {
+        Ddl ddl = new Ddl();
+        ddl.setTable(dialect.createTableQuery(table));
+        if (table.getPrimaryKey() != null) {
+            ddl.addConstraints(dialect.createPrimaryKeyQuery(table.getPrimaryKey()));
+        }
+        table.getImportedKeys().forEach(importedKey -> ddl.addConstraints(dialect.createImportedKeyQuery(importedKey)));
+        table.getCheckConstraints().forEach(checkConstraint -> ddl.addConstraints(dialect.createCheckConstraintQuery(checkConstraint)));
+        table.getIndices().forEach(index -> ddl.addIndex(dialect.createIndexQuery(index)));
+        table.getTriggers().forEach(trigger -> ddl.addTrigger(dialect.createTriggerQuery(trigger)));
+        if (table.getSequence() != null) {
+            ddl.setSequence(dialect.createSequenceQuery(table.getSequence()));
+        }
+        return ddl;
+    }
+
+    @Override
+    public Dml getDml(Table table) {
+        try {
+            String selectQuery = dialect.selectQuery(table);
+            return new Dml(
+                    connection.prepareStatement(selectQuery),
+                    rs -> {
+                        Map<String, Object> row = new HashMap<>();
+                        for (Column column : table.getColumns()) {
+                            row.put(column.getName(), rs.getObject(column.getName()));
+                        }
+                        return dialect.insertQuery(table, row);
+                    }
+            );
+        } catch (Exception e) {
+            String errorMessage = "Cannot get dml, cause by: " + e.getMessage();
+            throw new SchemaException(errorMessage, e);
+        }
+    }
+
     private Table findTable(String tableName) {
         return selectOne("select\n" +
                         "  t.owner,\n" +
@@ -213,6 +235,7 @@ public class OracleSchema extends AbstractSchema {
         select("select\n" +
                         "  c.owner,\n" +
                         "  c.table_name,\n" +
+                        "  c.column_id,\n" +
                         "  c.column_name,\n" +
                         "  c.data_type,\n" +
                         "  c.data_length,\n" +
@@ -240,6 +263,7 @@ public class OracleSchema extends AbstractSchema {
 
                     Column column = new Column();
                     column.setTable(table);
+                    column.setNumber(rs.getInt("column_id"));
                     column.setName(rs.getString("column_name"));
                     column.setColumnType(columnType);
                     column.setNullable("N".equalsIgnoreCase(rs.getString("nullable")));

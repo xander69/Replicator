@@ -1,8 +1,9 @@
 package ru.xander.replicator.schema;
 
-public class Column {
+public class Column implements Comparable<Column> {
 
     private Table table;
+    private int number;
     private String name;
     private ColumnType columnType;
     private int size;
@@ -17,6 +18,14 @@ public class Column {
 
     public void setTable(Table table) {
         this.table = table;
+    }
+
+    public int getNumber() {
+        return number;
+    }
+
+    public void setNumber(int number) {
+        this.number = number;
     }
 
     public String getName() {
@@ -73,5 +82,10 @@ public class Column {
 
     public void setComment(String comment) {
         this.comment = comment;
+    }
+
+    @Override
+    public int compareTo(Column other) {
+        return Integer.compare(number, other.number);
     }
 }

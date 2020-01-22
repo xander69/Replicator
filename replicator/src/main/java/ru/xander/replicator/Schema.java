@@ -4,6 +4,7 @@ import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.Constraint;
 import ru.xander.replicator.schema.Ddl;
+import ru.xander.replicator.schema.Dml;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.ModifyType;
@@ -18,8 +19,6 @@ public interface Schema extends AutoCloseable {
     VendorType getVendorType();
 
     Table getTable(String tableName);
-
-    Ddl getDdl(Table table);
 
     void createTable(Table table);
 
@@ -64,5 +63,9 @@ public interface Schema extends AutoCloseable {
     void dropSequence(Sequence sequence);
 
     void analyzeTable(Table table);
+
+    Ddl getDdl(Table table);
+
+    Dml getDml(Table table);
 
 }

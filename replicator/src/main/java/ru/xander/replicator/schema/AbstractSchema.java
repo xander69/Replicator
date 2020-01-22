@@ -1,6 +1,10 @@
-package ru.xander.replicator;
+package ru.xander.replicator.schema;
 
+import ru.xander.replicator.Schema;
+import ru.xander.replicator.SchemaOptions;
 import ru.xander.replicator.exception.SchemaException;
+import ru.xander.replicator.util.DataSetMapper;
+import ru.xander.replicator.util.SingleRowMapper;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -12,7 +16,7 @@ import java.sql.Statement;
 public abstract class AbstractSchema implements Schema {
 
     private static final Object[] emptyArgs = new Object[0];
-    private final Connection connection;
+    protected final Connection connection;
 
     public AbstractSchema(SchemaOptions options) {
         try {
@@ -26,11 +30,11 @@ public abstract class AbstractSchema implements Schema {
         }
     }
 
-    protected <T> T selectOne(String sql, SingleMapper<T> mapper) {
+    protected <T> T selectOne(String sql, SingleRowMapper<T> mapper) {
         return selectOne(sql, emptyArgs, mapper);
     }
 
-    protected <T> T selectOne(String sql, Object[] args, SingleMapper<T> mapper) {
+    protected <T> T selectOne(String sql, Object[] args, SingleRowMapper<T> mapper) {
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (int i = 0; i < args.length; i++) {
                 ps.setObject(i + 1, args[i]);
@@ -85,13 +89,5 @@ public abstract class AbstractSchema implements Schema {
             String errorMessage = "Failed to close connection: " + e.getMessage();
             throw new SchemaException(errorMessage, e);
         }
-    }
-
-    protected interface SingleMapper<T> {
-        T map(ResultSet rs) throws SQLException;
-    }
-
-    protected interface DataSetMapper {
-        void map(ResultSet rs) throws SQLException;
     }
 }

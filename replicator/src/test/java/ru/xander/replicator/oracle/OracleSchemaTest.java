@@ -3,6 +3,7 @@ package ru.xander.replicator.oracle;
 import org.junit.Ignore;
 import org.junit.Test;
 import ru.xander.replicator.Schema;
+import ru.xander.replicator.SchemaFactory;
 import ru.xander.replicator.SchemaOptionsFactory;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Sequence;
@@ -12,7 +13,7 @@ import ru.xander.replicator.schema.Table;
 public class OracleSchemaTest {
     @Test
     public void getTable() {
-        Schema schema = new OracleSchema(SchemaOptionsFactory.createSourceOracle());
+        Schema schema = SchemaFactory.create(SchemaOptionsFactory.createSourceOracle());
         Table table = schema.getTable("");
 
         if (table.getComment() != null) {
@@ -22,7 +23,7 @@ public class OracleSchemaTest {
         System.out.println();
 
         table.getColumns().forEach(c ->
-                System.out.println(c.getName()
+                System.out.println(c.getNumber() + ") " + c.getName()
                         + " " + c.getColumnType()
                         + ", size = " + c.getSize()
                         + ", scale = " + c.getScale()

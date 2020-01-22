@@ -7,6 +7,7 @@ import ru.xander.replicator.listener.ReplicatorListener;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.Ddl;
+import ru.xander.replicator.schema.Dml;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.ModifyType;
@@ -16,6 +17,7 @@ import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.util.StringUtils;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -61,8 +63,8 @@ public class Replicator {
         dropTable(tableName);
     }
 
-    public void dump(String tableName, OutputStream output) {
-        dumpTable(tableName, output);
+    public void dump(String tableName, OutputStream output, DumpOptions dumpOptions) {
+        dumpTable(tableName, output, dumpOptions);
     }
 
     private void replicateTable(String tableName, boolean withExported) {
@@ -430,44 +432,70 @@ public class Replicator {
         });
     }
 
-    private void dumpTable(String tableName, OutputStream output) {
+    private void dumpTable(String tableName, OutputStream output, DumpOptions dumpOptions) {
         Table sourceTable = source.getTable(tableName);
         if (sourceTable == null) {
             listener.warning("Table " + tableName + " not found on source");
             return;
         }
-        Ddl ddl = source.getDdl(sourceTable);
         try {
-            output.write(ddl.getTable().getBytes());
-            output.write(';');
-            output.write('\n');
+            if (dumpOptions.isDumpDdl()) {
+                dumpTableDdl(sourceTable, output);
+            }
+            if (dumpOptions.isDumpDml()) {
+                dumpTableDml(sourceTable, output);
+            }
+        } catch (Exception e) {
+            String errorMessage = "Failed to dump table " + tableName + ": " + e.getMessage();
+            throw new ReplicatorException(errorMessage, e);
+        }
+    }
+
+    private void dumpTableDdl(Table sourceTable, OutputStream output) throws IOException {
+        Ddl ddl = source.getDdl(sourceTable);
+        output.write(ddl.getTable().getBytes());
+        output.write(';');
+        output.write('\n');
+        if (!ddl.getConstraints().isEmpty()) {
             output.write('\n');
             for (String constraint : ddl.getConstraints()) {
                 output.write(constraint.getBytes());
                 output.write(';');
                 output.write('\n');
             }
+        }
+        if (!ddl.getIndices().isEmpty()) {
             output.write('\n');
             for (String index : ddl.getIndices()) {
                 output.write(index.getBytes());
                 output.write(';');
                 output.write('\n');
             }
-            if (ddl.getSequence() != null) {
-                output.write('\n');
-                output.write(ddl.getSequence().getBytes());
-                output.write(';');
-                output.write('\n');
-            }
+        }
+        if (ddl.getSequence() != null) {
+            output.write('\n');
+            output.write(ddl.getSequence().getBytes());
+            output.write(';');
+            output.write('\n');
+        }
+        if (!ddl.getTriggers().isEmpty()) {
             output.write('\n');
             for (String trigger : ddl.getTriggers()) {
                 output.write(trigger.getBytes());
                 output.write('\n');
             }
+        }
+    }
+
+    private void dumpTableDml(Table sourceTable, OutputStream output) throws IOException {
+        try (Dml dml = source.getDml(sourceTable)) {
             output.write('\n');
-        } catch (Exception e) {
-            String errorMessage = "Failed to dump table " + tableName + ": " + e.getMessage();
-            throw new ReplicatorException(errorMessage, e);
+            String insertQuery;
+            while ((insertQuery = dml.nextInsert()) != null) {
+                output.write(insertQuery.getBytes());
+                output.write(';');
+                output.write('\n');
+            }
         }
     }
 

@@ -2,6 +2,7 @@ package ru.xander.replicator.oracle;
 
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
+import ru.xander.replicator.schema.ColumnType;
 import ru.xander.replicator.schema.Constraint;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
@@ -13,9 +14,19 @@ import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.util.StringUtils;
 
+import java.sql.Timestamp;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 class OracleDialect {
+
+    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private static final SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyy-MM.dd HH:mm:ss.SSS");
+
     String createTableQuery(Table table) {
         return "CREATE TABLE " + getQualifiedName(table) + '\n' +
                 "(\n    " +
@@ -173,6 +184,52 @@ class OracleDialect {
                 "END;";
     }
 
+    String selectQuery(Table table) {
+        return "SELECT " +
+                table.getColumns()
+                        .stream()
+                        .sorted()
+                        .map(Column::getName)
+                        .collect(Collectors.joining(",\n")) + '\n' +
+                "FROM " + getQualifiedName(table);
+    }
+
+    String insertQuery(Table table) {
+        return "INSERT INTO " + getQualifiedName(table) + '\n' +
+                "(" +
+                table.getColumns()
+                        .stream()
+                        .sorted()
+                        .map(Column::getName)
+                        .collect(Collectors.joining(", ")) + ")\n" +
+                "VALUES (" +
+                table.getColumns()
+                        .stream()
+                        .map(c -> "?")
+                        .collect(Collectors.joining(", ")) + ')';
+    }
+
+    String insertQuery(Table table, Map<String, Object> values) {
+        //TODO: не поддерживаются BLOB-поля
+        return "INSERT INTO " + getQualifiedName(table) +
+                " (" +
+                table.getColumns()
+                        .stream()
+                        .filter(c -> c.getColumnType() != ColumnType.BLOB)
+                        .sorted()
+                        .map(Column::getName)
+                        .collect(Collectors.joining(", ")) + ")\n" +
+                "VALUES (" +
+                table.getColumns()
+                        .stream()
+                        .filter(c -> c.getColumnType() != ColumnType.BLOB)
+                        .map(c -> {
+                            Object value = values.get(c.getName());
+                            return formatValue(value, c);
+                        })
+                        .collect(Collectors.joining(", ")) + ')';
+    }
+
     private static String getColumnDefinition(Column column) {
         StringBuilder definition = new StringBuilder();
         definition.append(column.getName()).append(' ').append(getDataType(column));
@@ -203,6 +260,49 @@ class OracleDialect {
                 return dataType + "(" + column.getScale() + ")";
             default:
                 return dataType;
+        }
+    }
+
+    private static String formatValue(Object value, Column column) {
+        if (value == null) {
+            return "NULL";
+        }
+        switch (column.getColumnType()) {
+            case CHAR:
+            case STRING:
+            case RAW: {
+                String s = String.valueOf(value);
+                return '\'' + s.replace("'", "''") + '\'';
+            }
+            case CLOB: {
+                String s = String.valueOf(value);
+                String[] parts = StringUtils.cutString(s, 2000);
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < parts.length; i++) {
+                    sb.append("TO_CLOB('").append(parts[i].replace("'", "''")).append(')');
+                    if (i < (parts.length - 1)) {
+                        sb.append(" || ");
+                    }
+                }
+                return sb.toString();
+            }
+            case DATE: {
+                Date d = (Date) value;
+                return "TO_DATE('" + dateFormat.format(d) + "', ''YYYY-MM-DD HH24:MI:SS')";
+            }
+            case TIMESTAMP: {
+                Timestamp t = (Timestamp) value;
+                return "TO_TIMESTAMP('" + timestampFormat.format(t) + "', 'YYYY-MM-DD HH24:MI:SS.FF3')";
+            }
+            case DECIMAL: {
+                DecimalFormatSymbols formatSymbols = DecimalFormatSymbols.getInstance();
+                formatSymbols.setDecimalSeparator('.');
+                DecimalFormat decimalFormat = new DecimalFormat("##0.0" + StringUtils.repeat('#', column.getScale() - 1));
+                decimalFormat.setDecimalFormatSymbols(formatSymbols);
+                return decimalFormat.format(value);
+            }
+            default:
+                return String.valueOf(value);
         }
     }
 
