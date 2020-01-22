@@ -18,6 +18,7 @@ public class Table {
     private Map<String, Index> indexMap;
     private Map<String, Trigger> triggerMap;
     private Sequence sequence;
+    private VendorType vendorType;
 
     public Table() {
     }
@@ -51,6 +52,10 @@ public class Table {
         this.comment = comment;
     }
 
+    public Map<String, Column> getColumnMap() {
+        return columnMap;
+    }
+
     public Collection<Column> getColumns() {
         if (columnMap == null) {
             return Collections.emptyList();
@@ -80,6 +85,10 @@ public class Table {
         this.primaryKey = primaryKey;
     }
 
+    public Map<String, ImportedKey> getImportedKeyMap() {
+        return importedKeyMap;
+    }
+
     public Collection<ImportedKey> getImportedKeys() {
         if (importedKeyMap == null) {
             return Collections.emptyList();
@@ -99,6 +108,10 @@ public class Table {
             importedKeyMap = new LinkedHashMap<>();
         }
         importedKeyMap.put(importedKey.getName(), importedKey);
+    }
+
+    public Map<String, ExportedKey> getExportedKeyMap() {
+        return exportedKeyMap;
     }
 
     public Collection<ExportedKey> getExportedKeys() {
@@ -122,6 +135,10 @@ public class Table {
         exportedKeyMap.put(exportedKey.getFkName(), exportedKey);
     }
 
+    public Map<String, CheckConstraint> getCheckConstraintMap() {
+        return checkConstraintMap;
+    }
+
     public Collection<CheckConstraint> getCheckConstraints() {
         if (checkConstraintMap == null) {
             return Collections.emptyList();
@@ -143,6 +160,10 @@ public class Table {
         checkConstraintMap.put(checkConstraint.getName(), checkConstraint);
     }
 
+    public Map<String, Index> getIndexMap() {
+        return indexMap;
+    }
+
     public Collection<Index> getIndices() {
         if (indexMap == null) {
             return Collections.emptyList();
@@ -162,6 +183,10 @@ public class Table {
             indexMap = new LinkedHashMap<>();
         }
         indexMap.put(index.getName(), index);
+    }
+
+    public Map<String, Trigger> getTriggerMap() {
+        return triggerMap;
     }
 
     public Collection<Trigger> getTriggers() {
@@ -191,5 +216,13 @@ public class Table {
 
     public void setSequence(Sequence sequence) {
         this.sequence = sequence;
+    }
+
+    public VendorType getVendorType() {
+        return vendorType;
+    }
+
+    public void setVendorType(VendorType vendorType) {
+        this.vendorType = vendorType;
     }
 }

@@ -7,29 +7,42 @@ import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnType;
 import ru.xander.replicator.schema.Constraint;
 import ru.xander.replicator.schema.ExportedKey;
+import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.ModifyType;
 import ru.xander.replicator.schema.PrimaryKey;
-import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
+import ru.xander.replicator.schema.VendorType;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class OracleSchema extends AbstractSchema {
 
     private final String workSchema;
     private final OracleDialect dialect;
+    private final Map<String, Table> cache;
 
     public OracleSchema(SchemaOptions options) {
         super(options);
         this.workSchema = options.getWorkSchema();
         this.dialect = new OracleDialect();
+        this.cache = new HashMap<>();
+    }
+
+    @Override
+    public VendorType getVendorType() {
+        return VendorType.ORACLE;
     }
 
     @Override
     public Table getTable(String tableName) {
+        if (cache.containsKey(tableName)) {
+            return cache.get(tableName);
+        }
         Table table = findTable(tableName);
         if (table == null) {
             return null;
@@ -39,6 +52,7 @@ public class OracleSchema extends AbstractSchema {
         findIndices(table);
         findTriggers(table);
         findSequence(table);
+        cache.put(tableName, table);
         return table;
     }
 
@@ -171,6 +185,8 @@ public class OracleSchema extends AbstractSchema {
                     Table table = new Table();
                     table.setSchema(rs.getString("owner"));
                     table.setName(rs.getString("table_name"));
+                    table.setComment(rs.getString("comments"));
+                    table.setVendorType(getVendorType());
                     return table;
                 });
     }

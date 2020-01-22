@@ -10,8 +10,11 @@ import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
+import ru.xander.replicator.schema.VendorType;
 
 public interface Schema extends AutoCloseable {
+
+    VendorType getVendorType();
 
     Table getTable(String tableName);
 
