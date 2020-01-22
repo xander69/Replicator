@@ -3,10 +3,11 @@ package ru.xander.replicator;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.Constraint;
+import ru.xander.replicator.schema.Ddl;
+import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.ModifyType;
 import ru.xander.replicator.schema.PrimaryKey;
-import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
@@ -17,6 +18,8 @@ public interface Schema extends AutoCloseable {
     VendorType getVendorType();
 
     Table getTable(String tableName);
+
+    Ddl getDdl(Table table);
 
     void createTable(Table table);
 

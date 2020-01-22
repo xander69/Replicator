@@ -1,10 +1,12 @@
 package ru.xander.replicator;
 
+import ru.xander.replicator.exception.ReplicatorException;
 import ru.xander.replicator.listener.Alter;
 import ru.xander.replicator.listener.DummyListener;
 import ru.xander.replicator.listener.ReplicatorListener;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
+import ru.xander.replicator.schema.Ddl;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.ModifyType;
@@ -14,6 +16,7 @@ import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.util.StringUtils;
 
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
@@ -56,6 +59,10 @@ public class Replicator {
 
     public void drop(String tableName) {
         dropTable(tableName);
+    }
+
+    public void dump(String tableName, OutputStream output) {
+        dumpTable(tableName, output);
     }
 
     private void replicateTable(String tableName, boolean withExported) {
@@ -421,6 +428,47 @@ public class Replicator {
                 dropTable(exportedKey.getFkTableName());
             }
         });
+    }
+
+    private void dumpTable(String tableName, OutputStream output) {
+        Table sourceTable = source.getTable(tableName);
+        if (sourceTable == null) {
+            listener.warning("Table " + tableName + " not found on source");
+            return;
+        }
+        Ddl ddl = source.getDdl(sourceTable);
+        try {
+            output.write(ddl.getTable().getBytes());
+            output.write(';');
+            output.write('\n');
+            output.write('\n');
+            for (String constraint : ddl.getConstraints()) {
+                output.write(constraint.getBytes());
+                output.write(';');
+                output.write('\n');
+            }
+            output.write('\n');
+            for (String index : ddl.getIndices()) {
+                output.write(index.getBytes());
+                output.write(';');
+                output.write('\n');
+            }
+            if (ddl.getSequence() != null) {
+                output.write('\n');
+                output.write(ddl.getSequence().getBytes());
+                output.write(';');
+                output.write('\n');
+            }
+            output.write('\n');
+            for (String trigger : ddl.getTriggers()) {
+                output.write(trigger.getBytes());
+                output.write('\n');
+            }
+            output.write('\n');
+        } catch (Exception e) {
+            String errorMessage = "Failed to dump table " + tableName + ": " + e.getMessage();
+            throw new ReplicatorException(errorMessage, e);
+        }
     }
 
     private void suppressException(Runnable runnable) {

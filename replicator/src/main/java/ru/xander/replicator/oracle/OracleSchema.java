@@ -6,6 +6,7 @@ import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnType;
 import ru.xander.replicator.schema.Constraint;
+import ru.xander.replicator.schema.Ddl;
 import ru.xander.replicator.schema.ExportedKey;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
@@ -54,6 +55,23 @@ public class OracleSchema extends AbstractSchema {
         findSequence(table);
         cache.put(tableName, table);
         return table;
+    }
+
+    @Override
+    public Ddl getDdl(Table table) {
+        Ddl ddl = new Ddl();
+        ddl.setTable(dialect.createTableQuery(table));
+        if (table.getPrimaryKey() != null) {
+            ddl.addConstraints(dialect.createPrimaryKeyQuery(table.getPrimaryKey()));
+        }
+        table.getImportedKeys().forEach(importedKey -> ddl.addConstraints(dialect.createImportedKeyQuery(importedKey)));
+        table.getCheckConstraints().forEach(checkConstraint -> ddl.addConstraints(dialect.createCheckConstraintQuery(checkConstraint)));
+        table.getIndices().forEach(index -> ddl.addIndex(dialect.createIndexQuery(index)));
+        table.getTriggers().forEach(trigger -> ddl.addTrigger(dialect.createTriggerQuery(trigger)));
+        if (table.getSequence() != null) {
+            ddl.setSequence(dialect.createSequenceQuery(table.getSequence()));
+        }
+        return ddl;
     }
 
     @Override
@@ -416,7 +434,7 @@ public class OracleSchema extends AbstractSchema {
                     Trigger trigger = new Trigger();
                     trigger.setTable(table);
                     trigger.setName(rs.getString("trigger_name"));
-                    trigger.setBody("CREATE OR REPLACE TRIGGER " + rs.getString("description") + ' ' + rs.getString("trigger_body"));
+                    trigger.setBody("CREATE OR REPLACE TRIGGER " + rs.getString("description").trim() + '\n' + rs.getString("trigger_body").trim());
                     trigger.setEnabled("ENABLED".equals(rs.getString("status")));
                     table.addTrigger(trigger);
                 });

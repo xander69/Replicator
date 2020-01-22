@@ -3,11 +3,11 @@ package ru.xander.replicator.oracle;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.Constraint;
+import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.IndexType;
 import ru.xander.replicator.schema.ModifyType;
 import ru.xander.replicator.schema.PrimaryKey;
-import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
@@ -111,8 +111,10 @@ class OracleDialect {
         } else if (index.getType() == IndexType.UNIQUE) {
             ddl.append("UNIQUE ");
         }
-        ddl.append("INDEX ").append(getQualifiedName(index)).append(" ON ")
-                .append(getQualifiedName(index.getTable())).append(" (").append(index.getColumns()).append(")");
+        ddl.append("INDEX ")
+                .append(getQualifiedName(index)).append(" ON ")
+                .append(getQualifiedName(index.getTable()))
+                .append(" (").append(String.join(", ", index.getColumns())).append(")");
         return ddl.toString();
     }
 
@@ -175,7 +177,7 @@ class OracleDialect {
         StringBuilder definition = new StringBuilder();
         definition.append(column.getName()).append(' ').append(getDataType(column));
         if (column.getDefaultValue() != null) {
-            definition.append(" DEFAULT ").append(column.getDefaultValue());
+            definition.append(" DEFAULT ").append(column.getDefaultValue().trim());
         }
         // в Oralce NOT NULL реализован в виде check-констрейнта
 //        if (!column.isNullable()) {

@@ -3,7 +3,7 @@ package ru.xander.replicator.oracle;
 import org.junit.Ignore;
 import org.junit.Test;
 import ru.xander.replicator.Schema;
-import ru.xander.replicator.SchemaOptions;
+import ru.xander.replicator.SchemaOptionsFactory;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
@@ -12,14 +12,7 @@ import ru.xander.replicator.schema.Table;
 public class OracleSchemaTest {
     @Test
     public void getTable() {
-        SchemaOptions schemaOptions = new SchemaOptions();
-        schemaOptions.setJdbcDriver("oracle.jdbc.OracleDriver");
-        schemaOptions.setJdbcUrl("jdbc:oracle:thin:@<host>:1521:<sid>");
-        schemaOptions.setUsername("");
-        schemaOptions.setPassword("");
-        schemaOptions.setWorkSchema("");
-
-        Schema schema = new OracleSchema(schemaOptions);
+        Schema schema = new OracleSchema(SchemaOptionsFactory.createSourceOracle());
         Table table = schema.getTable("");
 
         if (table.getComment() != null) {
