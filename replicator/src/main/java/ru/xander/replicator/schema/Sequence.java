@@ -1,0 +1,68 @@
+package ru.xander.replicator.schema;
+
+public class Sequence {
+
+    private String schema;
+    private String name;
+    private String minValue;
+    private String maxValue;
+    private Long incrementBy;
+    private Long lastNumber;
+    private Long cacheSize;
+
+    public String getSchema() {
+        return schema;
+    }
+
+    public void setSchema(String schema) {
+        this.schema = schema;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getMinValue() {
+        return minValue;
+    }
+
+    public void setMinValue(String minValue) {
+        this.minValue = minValue;
+    }
+
+    public String getMaxValue() {
+        return maxValue;
+    }
+
+    public void setMaxValue(String maxValue) {
+        this.maxValue = maxValue;
+    }
+
+    public Long getIncrementBy() {
+        return incrementBy;
+    }
+
+    public void setIncrementBy(Long incrementBy) {
+        this.incrementBy = incrementBy;
+    }
+
+    public Long getLastNumber() {
+        return lastNumber;
+    }
+
+    public void setLastNumber(Long lastNumber) {
+        this.lastNumber = lastNumber;
+    }
+
+    public Long getCacheSize() {
+        return cacheSize;
+    }
+
+    public void setCacheSize(Long cacheSize) {
+        this.cacheSize = cacheSize;
+    }
+}
