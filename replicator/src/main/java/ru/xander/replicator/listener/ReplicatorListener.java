@@ -12,6 +12,10 @@ public interface ReplicatorListener {
         // do nothing
     }
 
+    default void progress(Progress progress) {
+        // do nothing
+    }
+
     ReplicatorListener stub = new ReplicatorListener() {
     };
 
@@ -28,6 +32,19 @@ public interface ReplicatorListener {
                 System.out.print(" (" + event.getExtra() + ")");
             }
             System.out.println();
+        }
+
+        @Override
+        public void progress(Progress progress) {
+            if (progress.getMessage() != null) {
+                System.out.print(progress.getMessage() + ": ");
+            }
+            if (progress.getTotal() != 0) {
+                long percent = (long) (progress.getValue() / (double) progress.getTotal()) * 100;
+                System.out.println(progress.getValue() + " / " + progress.getTotal() + " (" + percent + "%)");
+            } else {
+                System.out.println(progress.getValue() + " / " + progress.getTotal());
+            }
         }
     };
 }

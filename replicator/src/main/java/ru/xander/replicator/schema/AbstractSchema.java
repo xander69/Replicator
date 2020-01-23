@@ -4,7 +4,7 @@ import ru.xander.replicator.Schema;
 import ru.xander.replicator.SchemaOptions;
 import ru.xander.replicator.exception.SchemaException;
 import ru.xander.replicator.util.DataSetMapper;
-import ru.xander.replicator.util.SingleRowMapper;
+import ru.xander.replicator.util.RowMapper;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -30,11 +30,11 @@ public abstract class AbstractSchema implements Schema {
         }
     }
 
-    protected <T> T selectOne(String sql, SingleRowMapper<T> mapper) {
+    protected <T> T selectOne(String sql, RowMapper<T> mapper) {
         return selectOne(sql, emptyArgs, mapper);
     }
 
-    protected <T> T selectOne(String sql, Object[] args, SingleRowMapper<T> mapper) {
+    protected <T> T selectOne(String sql, Object[] args, RowMapper<T> mapper) {
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (int i = 0; i < args.length; i++) {
                 ps.setObject(i + 1, args[i]);

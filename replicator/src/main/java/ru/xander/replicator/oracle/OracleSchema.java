@@ -220,7 +220,11 @@ public class OracleSchema extends AbstractSchema {
         listener.event("Get DML for table " + table.getName());
         try {
             String selectQuery = dialect.selectQuery(table);
+
+            long rowsCount = selectOne("select count(*) as cnt from (" + selectQuery +")", rs -> rs.getLong("cnt"));
+
             return new Dml(
+                    rowsCount,
                     connection.prepareStatement(selectQuery),
                     rs -> {
                         Map<String, Object> row = new HashMap<>();
@@ -507,14 +511,15 @@ public class OracleSchema extends AbstractSchema {
                         "  s.last_number,\n" +
                         "  s.cache_size\n" +
                         "from sys.all_triggers t\n" +
-                        "  inner join sys.all_dependencies d on\n" +
-                        "    d.owner = t.owner\n" +
-                        "    and d.name = t.trigger_name\n" +
+                        "  inner join sys.all_dependencies d on" +
+                        "    t.table_owner = ?" +
+                        "    and t.table_name = ?\n" +
+                        "    and d.owner = t.owner\n" +
+                        "    and d.name = t.trigger_name" +
+                        "    and d.referenced_type = 'SEQUENCE'\n" +
                         "  inner join sys.all_sequences s on\n" +
                         "    s.sequence_owner = d.referenced_owner\n" +
-                        "    and s.sequence_name = d.referenced_name\n" +
-                        "where t.table_owner = ?\n" +
-                        "      and t.table_name = ?", new Object[]{workSchema, table.getName()},
+                        "    and s.sequence_name = d.referenced_name", new Object[]{workSchema, table.getName()},
                 rs -> {
                     Sequence sequence = new Sequence();
                     sequence.setSchema(rs.getString("sequence_owner"));

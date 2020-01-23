@@ -288,7 +288,7 @@ class OracleDialect {
             }
             case DATE: {
                 Date d = (Date) value;
-                return "TO_DATE('" + dateFormat.format(d) + "', ''YYYY-MM-DD HH24:MI:SS')";
+                return "TO_DATE('" + dateFormat.format(d) + "', 'YYYY-MM-DD HH24:MI:SS')";
             }
             case TIMESTAMP: {
                 Timestamp t = (Timestamp) value;

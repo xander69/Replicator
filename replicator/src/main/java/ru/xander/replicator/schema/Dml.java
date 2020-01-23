@@ -1,7 +1,7 @@
 package ru.xander.replicator.schema;
 
 import ru.xander.replicator.exception.SchemaException;
-import ru.xander.replicator.util.SingleRowMapper;
+import ru.xander.replicator.util.RowMapper;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -10,12 +10,18 @@ import java.sql.SQLException;
 public class Dml implements AutoCloseable {
 
     private final PreparedStatement ps;
-    private final SingleRowMapper<String> insertMapper;
+    private final RowMapper<String> insertMapper;
+    private final long totalRows;
     private ResultSet resultSet;
 
-    public Dml(PreparedStatement ps, SingleRowMapper<String> insertMapper) {
+    public Dml(long totalRows, PreparedStatement ps, RowMapper<String> insertMapper) {
+        this.totalRows = totalRows;
         this.ps = ps;
         this.insertMapper = insertMapper;
+    }
+
+    public long getTotalRows() {
+        return totalRows;
     }
 
     public String nextInsert() {

@@ -2,6 +2,7 @@ package ru.xander.replicator;
 
 import ru.xander.replicator.exception.ReplicatorException;
 import ru.xander.replicator.listener.Alter;
+import ru.xander.replicator.listener.Progress;
 import ru.xander.replicator.listener.ReplicatorListener;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
@@ -18,6 +19,7 @@ import ru.xander.replicator.util.StringUtils;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
@@ -439,10 +441,10 @@ public class Replicator {
         }
         try {
             if (dumpOptions.isDumpDdl()) {
-                dumpTableDdl(sourceTable, output);
+                dumpTableDdl(sourceTable, output, dumpOptions.getCharset());
             }
             if (dumpOptions.isDumpDml()) {
-                dumpTableDml(sourceTable, output);
+                dumpTableDml(sourceTable, output, dumpOptions.getCharset(), dumpOptions.getVerboseStep());
             }
         } catch (Exception e) {
             String errorMessage = "Failed to dump table " + tableName + ": " + e.getMessage();
@@ -450,15 +452,15 @@ public class Replicator {
         }
     }
 
-    private void dumpTableDdl(Table sourceTable, OutputStream output) throws IOException {
+    private void dumpTableDdl(Table sourceTable, OutputStream output, Charset charset) throws IOException {
         Ddl ddl = source.getDdl(sourceTable);
-        output.write(ddl.getTable().getBytes());
+        output.write(ddl.getTable().getBytes(charset));
         output.write(';');
         output.write('\n');
         if (!ddl.getConstraints().isEmpty()) {
             output.write('\n');
             for (String constraint : ddl.getConstraints()) {
-                output.write(constraint.getBytes());
+                output.write(constraint.getBytes(charset));
                 output.write(';');
                 output.write('\n');
             }
@@ -466,34 +468,40 @@ public class Replicator {
         if (!ddl.getIndices().isEmpty()) {
             output.write('\n');
             for (String index : ddl.getIndices()) {
-                output.write(index.getBytes());
+                output.write(index.getBytes(charset));
                 output.write(';');
                 output.write('\n');
             }
         }
         if (ddl.getSequence() != null) {
             output.write('\n');
-            output.write(ddl.getSequence().getBytes());
+            output.write(ddl.getSequence().getBytes(charset));
             output.write(';');
             output.write('\n');
         }
         if (!ddl.getTriggers().isEmpty()) {
             output.write('\n');
             for (String trigger : ddl.getTriggers()) {
-                output.write(trigger.getBytes());
+                output.write(trigger.getBytes(charset));
                 output.write('\n');
             }
         }
     }
 
-    private void dumpTableDml(Table sourceTable, OutputStream output) throws IOException {
+    private void dumpTableDml(Table sourceTable, OutputStream output, Charset charset, long verboseStep) throws IOException {
         try (Dml dml = source.getDml(sourceTable)) {
             output.write('\n');
             String insertQuery;
+            long totalRows = dml.getTotalRows();
+            long currentRow = 0;
             while ((insertQuery = dml.nextInsert()) != null) {
-                output.write(insertQuery.getBytes());
+                output.write(insertQuery.getBytes(charset));
                 output.write(';');
                 output.write('\n');
+                currentRow++;
+                if ((currentRow % verboseStep) == 0) {
+                    listener.progress(new Progress(currentRow, totalRows, "Dump table " + sourceTable.getName()));
+                }
             }
         }
     }

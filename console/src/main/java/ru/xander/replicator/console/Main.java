@@ -71,7 +71,7 @@ public class Main {
         commandLine = new DefaultParser().parse(options, args);
     }
 
-    private void execute() throws ParseException {
+    private void execute() throws Exception {
         String cmd = commandLine.getOptionValue(PARAM_CMD);
         if ("dump".equals(cmd)) {
             requireArgs(PARAM_DUMP_TABLES);
@@ -81,25 +81,26 @@ public class Main {
         }
     }
 
-    private void dump() {
+    private void dump() throws Exception {
         SchemaOptions sourceSchemaOptions = createSourceSchemaOption();
-        Schema sourceSchema = SchemaFactory.create(sourceSchemaOptions);
-        Replicator replicator = new Replicator(sourceSchema, sourceSchema, new ConsoleListener(null));
+        try (Schema sourceSchema = SchemaFactory.create(sourceSchemaOptions)) {
+            Replicator replicator = new Replicator(sourceSchema, sourceSchema, new ConsoleListener(null));
 
-        File outPath = new File(System.getProperty("user.dir"), "dumps");
-        //noinspection ResultOfMethodCallIgnored
-        outPath.mkdirs();
+            File outPath = new File(System.getProperty("user.dir"), "dumps");
+            //noinspection ResultOfMethodCallIgnored
+            outPath.mkdirs();
 
-        String[] tables = commandLine.getOptionValue(PARAM_DUMP_TABLES).split(",");
-        for (String table : tables) {
-            String tableName = table.trim().toUpperCase();
-            File dumpFile = new File(outPath, tableName + ".sql");
-            try (FileOutputStream outputStream = new FileOutputStream(dumpFile)) {
-                log.info("Dump table {}", tableName);
-                replicator.dump(tableName, outputStream, new DumpOptions());
-                log.info("Dump saved to {}", dumpFile.getAbsolutePath());
-            } catch (Exception e) {
-                throw new RuntimeException("Ошибка при создании дампа для таблицы " + tableName, e);
+            String[] tables = commandLine.getOptionValue(PARAM_DUMP_TABLES).split(",");
+            for (String table : tables) {
+                String tableName = table.trim().toUpperCase();
+                File dumpFile = new File(outPath, tableName + ".sql");
+                try (FileOutputStream outputStream = new FileOutputStream(dumpFile)) {
+                    log.info("Dump table {}", tableName);
+                    replicator.dump(tableName, outputStream, new DumpOptions());
+                    log.info("Dump saved to {}", dumpFile.getAbsolutePath());
+                } catch (Exception e) {
+                    throw new RuntimeException("Ошибка при создании дампа для таблицы " + tableName, e);
+                }
             }
         }
     }
