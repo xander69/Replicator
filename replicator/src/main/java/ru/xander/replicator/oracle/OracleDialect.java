@@ -1,5 +1,6 @@
 package ru.xander.replicator.oracle;
 
+import ru.xander.replicator.exception.SchemaException;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnType;
@@ -14,6 +15,10 @@ import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.util.StringUtils;
 
+import java.io.IOException;
+import java.io.Reader;
+import java.sql.Clob;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -249,6 +254,10 @@ class OracleDialect {
             case BOOLEAN:
                 return dataType + "(1)";
             case INTEGER:
+                if (column.getSize() == 0) {
+                    return dataType;
+                }
+                return dataType + "(" + column.getSize() + ")";
             case RAW:
             case CHAR:
                 return dataType + "(" + column.getSize() + ")";
@@ -275,11 +284,14 @@ class OracleDialect {
                 return '\'' + s.replace("'", "''") + '\'';
             }
             case CLOB: {
-                String s = String.valueOf(value);
+                String s = readClob((Clob) value);
+                if (s.length() <= 2000) {
+                    return '\'' + s.replace("'", "''") + '\'';
+                }
                 String[] parts = StringUtils.cutString(s, 2000);
                 StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < parts.length; i++) {
-                    sb.append("TO_CLOB('").append(parts[i].replace("'", "''")).append(')');
+                    sb.append("TO_CLOB('").append(parts[i].replace("'", "''")).append("')");
                     if (i < (parts.length - 1)) {
                         sb.append(" || ");
                     }
@@ -320,5 +332,20 @@ class OracleDialect {
 
     private static String getQualifiedName(Sequence sequence) {
         return sequence.getSchema() + '.' + sequence.getName();
+    }
+
+    private static String readClob(Clob clob) {
+        StringBuilder value = new StringBuilder();
+        try (Reader reader = clob.getCharacterStream()) {
+            char[] buffer = new char[4096];
+            int len;
+            while ((len = reader.read(buffer)) != -1) {
+                value.append(buffer, 0, len);
+            }
+        } catch (SQLException | IOException e) {
+            String errorMessage = "Cannot read CLOB value: " + e.getMessage();
+            throw new SchemaException(errorMessage, e);
+        }
+        return value.toString();
     }
 }

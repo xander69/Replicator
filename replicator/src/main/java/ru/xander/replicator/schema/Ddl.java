@@ -10,6 +10,7 @@ public class Ddl {
     private List<String> indices;
     private List<String> triggers;
     private String sequence;
+    private String analyze;
 
     public String getTable() {
         return table;
@@ -67,5 +68,13 @@ public class Ddl {
 
     public void setSequence(String sequence) {
         this.sequence = sequence;
+    }
+
+    public String getAnalyze() {
+        return analyze;
+    }
+
+    public void setAnalyze(String analyze) {
+        this.analyze = analyze;
     }
 }

@@ -212,6 +212,7 @@ public class OracleSchema extends AbstractSchema {
         if (table.getSequence() != null) {
             ddl.setSequence(dialect.createSequenceQuery(table.getSequence()));
         }
+        ddl.setAnalyze(dialect.analyzeTableQuery(table));
         return ddl;
     }
 
@@ -491,10 +492,15 @@ public class OracleSchema extends AbstractSchema {
                         "where t.table_owner = ?\n" +
                         "      and t.table_name = ?", new Object[]{workSchema, table.getName()},
                 rs -> {
+                    //TODO: бывает, в description и body не указана схема у объектов
+                    // надо как-то обработать этот момент
+                    String description = rs.getString("description").trim();
+                    String trigger_body = rs.getString("trigger_body").trim();
+
                     Trigger trigger = new Trigger();
                     trigger.setTable(table);
                     trigger.setName(rs.getString("trigger_name"));
-                    trigger.setBody("CREATE OR REPLACE TRIGGER " + rs.getString("description").trim() + '\n' + rs.getString("trigger_body").trim());
+                    trigger.setBody("CREATE OR REPLACE TRIGGER " + description + '\n' + trigger_body);
                     trigger.setEnabled("ENABLED".equals(rs.getString("status")));
                     table.addTrigger(trigger);
                 });

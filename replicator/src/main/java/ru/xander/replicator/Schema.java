@@ -1,5 +1,6 @@
 package ru.xander.replicator;
 
+import ru.xander.replicator.schema.BatchExecutor;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.Constraint;
@@ -67,5 +68,7 @@ public interface Schema extends AutoCloseable {
     Ddl getDdl(Table table);
 
     Dml getDml(Table table);
+
+    BatchExecutor createBatchExecutor();
 
 }

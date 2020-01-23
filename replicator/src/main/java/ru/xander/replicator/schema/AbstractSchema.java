@@ -82,6 +82,11 @@ public abstract class AbstractSchema implements Schema {
     }
 
     @Override
+    public BatchExecutor createBatchExecutor() {
+        return new BatchExecutor(connection);
+    }
+
+    @Override
     public void close() {
         try {
             this.connection.close();
