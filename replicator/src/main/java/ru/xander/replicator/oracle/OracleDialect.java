@@ -280,18 +280,17 @@ class OracleDialect {
             case CHAR:
             case STRING:
             case RAW: {
-                String s = String.valueOf(value);
-                return '\'' + s.replace("'", "''") + '\'';
+                return quoteString(String.valueOf(value));
             }
             case CLOB: {
-                String s = readClob((Clob) value);
-                if (s.length() <= 2000) {
-                    return '\'' + s.replace("'", "''") + '\'';
+                String clob = readClob((Clob) value);
+                if (clob.length() <= 2000) {
+                    return quoteString(clob);
                 }
-                String[] parts = StringUtils.cutString(s, 2000);
+                String[] parts = StringUtils.cutString(clob, 2000);
                 StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < parts.length; i++) {
-                    sb.append("TO_CLOB('").append(parts[i].replace("'", "''")).append("')");
+                    sb.append("TO_CLOB(").append(quoteString(parts[i])).append(")");
                     if (i < (parts.length - 1)) {
                         sb.append(" || ");
                     }
@@ -332,6 +331,14 @@ class OracleDialect {
 
     private static String getQualifiedName(Sequence sequence) {
         return sequence.getSchema() + '.' + sequence.getName();
+    }
+
+    private static String quoteString(String string) {
+        return '\'' + string
+                .replace("'", "''")
+                .replace("\n", "'||CHR(10)||'")
+                .replace("\r", "'||CHR(13)||'")
+                + '\'';
     }
 
     private static String readClob(Clob clob) {

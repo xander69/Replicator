@@ -450,14 +450,14 @@ public class Replicator {
         try {
             if (dumpOptions.isDumpDdl()) {
                 Ddl ddl = source.getDdl(sourceTable);
-                dumpTableDdl(ddl, output, dumpOptions.getCharset());
+                dumpTableDdl(ddl, output, dumpOptions);
                 if (dumpOptions.isDumpDml()) {
                     output.write('\n');
-                    dumpTableDml(sourceTable, output, dumpOptions.getCharset(), dumpOptions.getVerboseStep());
+                    dumpTableDml(sourceTable, output, dumpOptions);
                 }
-                dumpTableObjectsDdl(ddl, output, dumpOptions.getCharset());
+                dumpTableObjectsDdl(ddl, output, dumpOptions);
             } else if (dumpOptions.isDumpDml()) {
-                dumpTableDml(sourceTable, output, dumpOptions.getCharset(), dumpOptions.getVerboseStep());
+                dumpTableDml(sourceTable, output, dumpOptions);
             }
         } catch (Exception e) {
             String errorMessage = "Failed to dump table " + tableName + ": " + e.getMessage();
@@ -465,13 +465,14 @@ public class Replicator {
         }
     }
 
-    private void dumpTableDdl(Ddl ddl, OutputStream output, Charset charset) throws IOException {
-        output.write(ddl.getTable().getBytes(charset));
+    private void dumpTableDdl(Ddl ddl, OutputStream output, DumpOptions dumpOptions) throws IOException {
+        output.write(ddl.getTable().getBytes(dumpOptions.getCharset()));
         output.write(';');
         output.write('\n');
     }
 
-    private void dumpTableObjectsDdl(Ddl ddl, OutputStream output, Charset charset) throws IOException {
+    private void dumpTableObjectsDdl(Ddl ddl, OutputStream output, DumpOptions dumpOptions) throws IOException {
+        final Charset charset = dumpOptions.getCharset();
         if (!ddl.getConstraints().isEmpty()) {
             output.write('\n');
             for (String constraint : ddl.getConstraints()) {
@@ -506,8 +507,12 @@ public class Replicator {
         output.write('\n');
     }
 
-    private void dumpTableDml(Table sourceTable, OutputStream output, Charset charset, long verboseStep) throws IOException {
+    private void dumpTableDml(Table sourceTable, OutputStream output, DumpOptions dumpOptions) throws IOException {
+        final Charset charset = dumpOptions.getCharset();
+        final long verboseEach = dumpOptions.getVerboseEach();
+        final long commitEach = dumpOptions.getCommitEach();
         try (Dml dml = source.getDml(sourceTable)) {
+            final String commitStatement = dml.getCommitStatement();
             String insertQuery;
             long totalRows = dml.getTotalRows();
             long currentRow = 0;
@@ -516,9 +521,19 @@ public class Replicator {
                 output.write(';');
                 output.write('\n');
                 currentRow++;
-                if ((currentRow % verboseStep) == 0) {
+                if ((commitEach > 0) && ((currentRow % commitEach) == 0)) {
+                    output.write(commitStatement.getBytes(charset));
+                    output.write(';');
+                    output.write('\n');
+                }
+                if ((currentRow % verboseEach) == 0) {
                     listener.progress(new Progress(currentRow, totalRows, "Dump table " + sourceTable.getName() + " from source"));
                 }
+            }
+            if ((commitEach == 0) || ((currentRow % commitEach) != 0)) {
+                output.write(commitStatement.getBytes(charset));
+                output.write(';');
+                output.write('\n');
             }
         }
     }
@@ -574,7 +589,7 @@ public class Replicator {
                     readBatch = 0;
                 }
             }
-            batchExecutor.commit();
+            batchExecutor.finish();
         } catch (Exception e) {
             String errorMessage = "Failed to pump script " + scriptFile.getAbsolutePath() + " at line " + lineNumber + ": " + e.getMessage();
             throw new ReplicatorException(errorMessage, e);

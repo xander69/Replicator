@@ -18,6 +18,7 @@ public class Table {
     private Map<String, Index> indexMap;
     private Map<String, Trigger> triggerMap;
     private Sequence sequence;
+    //TODO: реализовать поддержку партиций
     private VendorType vendorType;
 
     public Table() {

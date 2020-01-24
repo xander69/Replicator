@@ -233,7 +233,8 @@ public class OracleSchema extends AbstractSchema {
                             row.put(column.getName(), rs.getObject(column.getName()));
                         }
                         return dialect.insertQuery(table, row);
-                    }
+                    },
+                    "COMMIT"
             );
         } catch (Exception e) {
             String errorMessage = "Cannot get dml, cause by: " + e.getMessage();

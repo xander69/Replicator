@@ -12,16 +12,22 @@ public class Dml implements AutoCloseable {
     private final PreparedStatement ps;
     private final RowMapper<String> insertMapper;
     private final long totalRows;
+    private final String commitStatement;
     private ResultSet resultSet;
 
-    public Dml(long totalRows, PreparedStatement ps, RowMapper<String> insertMapper) {
+    public Dml(long totalRows, PreparedStatement ps, RowMapper<String> insertMapper, String commitStatement) {
         this.totalRows = totalRows;
         this.ps = ps;
         this.insertMapper = insertMapper;
+        this.commitStatement = commitStatement;
     }
 
     public long getTotalRows() {
         return totalRows;
+    }
+
+    public String getCommitStatement() {
+        return commitStatement;
     }
 
     public String nextInsert() {

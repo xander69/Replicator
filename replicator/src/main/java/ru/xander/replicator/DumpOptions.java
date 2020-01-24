@@ -5,10 +5,27 @@ import java.nio.charset.StandardCharsets;
 
 public class DumpOptions {
 
+    /**
+     * Сохранять DDL в дамп
+     */
     private boolean dumpDdl = true;
+    /**
+     * Сохранять данные в дамп
+     */
     private boolean dumpDml = true;
+    /**
+     * Кодировка выходного файла
+     */
     private Charset charset = StandardCharsets.UTF_8;
-    private long verboseStep = 1000L;
+    /**
+     * Количество записей, после которого будет генерироваться событие прогресса
+     */
+    private long verboseEach = 1000L;
+    /**
+     * Количество записей, после которого будет выполняться коммит.
+     * Если 0, то коммит будет только в конце.
+     */
+    private long commitEach = 1000L;
 
     public boolean isDumpDdl() {
         return dumpDdl;
@@ -34,11 +51,19 @@ public class DumpOptions {
         this.charset = charset;
     }
 
-    public long getVerboseStep() {
-        return verboseStep;
+    public long getVerboseEach() {
+        return verboseEach;
     }
 
-    public void setVerboseStep(long verboseStep) {
-        this.verboseStep = verboseStep;
+    public void setVerboseEach(long verboseEach) {
+        this.verboseEach = verboseEach;
+    }
+
+    public long getCommitEach() {
+        return commitEach;
+    }
+
+    public void setCommitEach(long commitEach) {
+        this.commitEach = commitEach;
     }
 }

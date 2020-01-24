@@ -30,29 +30,19 @@ public class BatchExecutor implements AutoCloseable {
             if ((currentBatchSize % batchSize) == 0) {
                 this.statement.executeBatch();
                 this.currentBatchSize = 0;
-                commit();
             }
         } catch (SQLException e) {
-            rollback();
             throw new BatchException(e.getMessage(), e);
         }
     }
 
-    public void commit() {
+    public void finish() {
         try {
             if (this.currentBatchSize > 0) {
                 this.statement.executeBatch();
+                this.currentBatchSize = 0;
+                this.connection.commit();
             }
-            this.connection.commit();
-        } catch (SQLException e) {
-            rollback();
-            throw new BatchException(e.getMessage(), e);
-        }
-    }
-
-    public void rollback() {
-        try {
-            this.connection.rollback();
         } catch (SQLException e) {
             throw new BatchException(e.getMessage(), e);
         }
