@@ -22,7 +22,7 @@ public interface ReplicatorListener {
     ReplicatorListener stdout = new ReplicatorListener() {
         @Override
         public void warning(String message) {
-            System.out.println(LocalDateTime.now() + " - Warning: " + message);
+            System.err.println(LocalDateTime.now() + " - Warning: " + message);
         }
 
         @Override

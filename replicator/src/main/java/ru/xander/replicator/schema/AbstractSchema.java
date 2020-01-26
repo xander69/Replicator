@@ -2,6 +2,7 @@ package ru.xander.replicator.schema;
 
 import ru.xander.replicator.Schema;
 import ru.xander.replicator.SchemaOptions;
+import ru.xander.replicator.exception.QueryFailedException;
 import ru.xander.replicator.exception.SchemaException;
 import ru.xander.replicator.util.DataSetMapper;
 import ru.xander.replicator.util.RowMapper;
@@ -47,8 +48,7 @@ public abstract class AbstractSchema implements Schema {
                 }
             }
         } catch (Exception e) {
-            String errorMessage = "Failed to execute query: " + e.getMessage() + "\nQuery:\n" + sql;
-            throw new SchemaException(errorMessage, e);
+            throw new QueryFailedException(sql, e);
         }
     }
 
@@ -67,8 +67,7 @@ public abstract class AbstractSchema implements Schema {
                 }
             }
         } catch (Exception e) {
-            String errorMessage = "Failed to execute query: " + e.getMessage() + "\nQuery:\n" + sql;
-            throw new SchemaException(errorMessage, e);
+            throw new QueryFailedException(sql, e);
         }
     }
 
@@ -76,8 +75,7 @@ public abstract class AbstractSchema implements Schema {
         try (Statement statement = connection.createStatement()) {
             statement.execute(sql);
         } catch (SQLException e) {
-            String errorMessage = "Failed to execute query: " + e.getMessage() + "\nQuery:\n" + sql;
-            throw new SchemaException(errorMessage, e);
+            throw new QueryFailedException(sql, e);
         }
     }
 

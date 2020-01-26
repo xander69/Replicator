@@ -54,6 +54,9 @@ public class Table {
     }
 
     public Map<String, Column> getColumnMap() {
+        if (columnMap == null) {
+            return Collections.emptyMap();
+        }
         return columnMap;
     }
 
@@ -87,6 +90,9 @@ public class Table {
     }
 
     public Map<String, ImportedKey> getImportedKeyMap() {
+        if (importedKeyMap == null) {
+            return Collections.emptyMap();
+        }
         return importedKeyMap;
     }
 
@@ -112,6 +118,9 @@ public class Table {
     }
 
     public Map<String, ExportedKey> getExportedKeyMap() {
+        if (exportedKeyMap == null) {
+            return Collections.emptyMap();
+        }
         return exportedKeyMap;
     }
 
@@ -137,6 +146,9 @@ public class Table {
     }
 
     public Map<String, CheckConstraint> getCheckConstraintMap() {
+        if (checkConstraintMap == null) {
+            return Collections.emptyMap();
+        }
         return checkConstraintMap;
     }
 
@@ -162,6 +174,9 @@ public class Table {
     }
 
     public Map<String, Index> getIndexMap() {
+        if (indexMap == null) {
+            return Collections.emptyMap();
+        }
         return indexMap;
     }
 
@@ -187,6 +202,9 @@ public class Table {
     }
 
     public Map<String, Trigger> getTriggerMap() {
+        if (triggerMap == null) {
+            return Collections.emptyMap();
+        }
         return triggerMap;
     }
 
