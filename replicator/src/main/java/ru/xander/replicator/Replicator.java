@@ -45,7 +45,7 @@ public class Replicator {
     private final Schema source;
     private final Schema target;
     private final ReplicatorListener listener;
-    private final Set<String> createdTables;
+    private final Set<String> replicatedTables;
     private final Set<String> droppedTables;
 
     public Replicator(Schema source, Schema target) {
@@ -58,7 +58,7 @@ public class Replicator {
         this.source = source;
         this.target = target;
         this.listener = listener == null ? ReplicatorListener.stub : listener;
-        this.createdTables = new HashSet<>();
+        this.replicatedTables = new HashSet<>();
         this.droppedTables = new HashSet<>();
     }
 
@@ -89,6 +89,12 @@ public class Replicator {
     }
 
     private void replicateTable(String tableName, boolean withExported) {
+        if (replicatedTables.contains(tableName)) {
+            return;
+        }
+        replicatedTables.add(tableName);
+        droppedTables.remove(tableName);
+
         Table sourceTable = source.getTable(tableName);
         if (sourceTable == null) {
             listener.warning("Table " + tableName + " not found on source");
@@ -103,12 +109,6 @@ public class Replicator {
     }
 
     private void createTable(Table table, boolean withExported) {
-        if (createdTables.contains(table.getName())) {
-            return;
-        }
-        createdTables.add(table.getName());
-        droppedTables.remove(table.getName());
-
         replicateImportTables(table);
 
         listener.alter(new Alter(CREATE_TABLE, table.getName()));
@@ -177,7 +177,7 @@ public class Replicator {
     }
 
     private void updateTable(Table targetTable, Table sourceTable, boolean withExported) {
-        createdTables.add(targetTable.getName());
+        replicatedTables.add(targetTable.getName());
         droppedTables.remove(targetTable.getName());
 
         replicateImportTables(sourceTable);
@@ -415,7 +415,7 @@ public class Replicator {
             return;
         }
         droppedTables.add(table.getName());
-        createdTables.remove(table.getName());
+        replicatedTables.remove(table.getName());
 
         dropExportTables(table);
 
@@ -480,7 +480,7 @@ public class Replicator {
         if (diffs.isEmpty()) {
             return new CompareResult(CompareResultType.EQUALS, Collections.emptyList());
         } else {
-            return new CompareResult(CompareResultType.DIFFERENT, Collections.emptyList());
+            return new CompareResult(CompareResultType.DIFFERENT, diffs);
         }
     }
 
@@ -621,7 +621,7 @@ public class Replicator {
         sourceIndexes.forEach((indexName, sourceIndex) -> {
             Index targetIndex = targetIndexes.get(indexName);
             if (targetIndex == null) {
-                diffs.add(new CompareDiff(CompareKind.INDEX_ABSNET_ON_TARGET, indexName, null));
+                diffs.add(new CompareDiff(CompareKind.INDEX_ABSENT_ON_TARGET, indexName, null));
             } else {
                 if (!Objects.equals(sourceIndex.getType(), targetIndex.getType())) {
                     diffs.add(new CompareDiff(CompareKind.INDEX_TYPE,
@@ -642,7 +642,7 @@ public class Replicator {
         });
         targetIndexes.forEach((indexName, targetIndex) -> {
             if (!sourceIndexes.containsKey(indexName)) {
-                diffs.add(new CompareDiff(CompareKind.INDEX_ABSNET_ON_SOURCE, null, indexName));
+                diffs.add(new CompareDiff(CompareKind.INDEX_ABSENT_ON_SOURCE, null, indexName));
             }
         });
     }

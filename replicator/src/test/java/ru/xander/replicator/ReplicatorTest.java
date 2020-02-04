@@ -6,10 +6,12 @@ import org.junit.Ignore;
 import org.junit.Test;
 import ru.xander.replicator.compare.CompareResult;
 import ru.xander.replicator.compare.CompareResultType;
-import ru.xander.replicator.listener.ReplicatorListener;
 
 import java.io.File;
 
+/**
+ * @author Alexander Shakhov
+ */
 @Ignore
 public class ReplicatorTest {
 
@@ -21,7 +23,7 @@ public class ReplicatorTest {
     public void setUp() {
         source = SchemaFactory.create(SchemaOptionsFactory.createSourceOracle());
         target = SchemaFactory.create(SchemaOptionsFactory.createTargetOracle());
-        replicator = new Replicator(source, target, ReplicatorListener.stdout);
+        replicator = new Replicator(source, target, new TestReplicatorListener());
     }
 
     @After
@@ -32,39 +34,44 @@ public class ReplicatorTest {
 
     @Test
     public void replicate() {
-        replicator.replicate("F_ASFK_RASHKASSAYEAR", false);
+        replicator.replicate("SAMPLE_TABLE", true);
     }
 
     @Test
     public void drop() {
+        replicator.drop("SAMPLE_TABLE");
     }
 
     @Test
     public void compare() {
-        final String tableName = "F_ASFK_RASHKASSAYEAR";
-        CompareResult compareResult = replicator.compare(tableName);
-        if (compareResult.getResultType() == CompareResultType.ABSENT_ON_SOURCE) {
-            System.out.println("Table " + tableName + " absent on source");
-        } else if (compareResult.getResultType() == CompareResultType.ABSENT_ON_TARGET) {
-            System.out.println("Table " + tableName + " absent on target");
-        } else if (compareResult.getResultType() == CompareResultType.EQUALS) {
-            System.out.println("Table " + tableName + " equals");
-        } else {
-            compareResult.getDiffs().forEach(diff -> {
-                System.out.println(diff.getKind() + ": "
-                        + '\'' + diff.getSourceValue() + "', "
-                        + '\'' + diff.getTargetValue() + '\'');
-            });
-        }
+        printCompareResult(replicator.compare("SAMPLE_TABLE"));
     }
 
     @Test
     public void dump() {
-        replicator.dump("FX_RS_TYPEREPORT", System.out, new DumpOptions());
+        DumpOptions dumpOptions = new DumpOptions();
+        dumpOptions.setDumpDdl(true);
+        dumpOptions.setDumpDml(true);
+        replicator.dump("SAMPLE_TABLE", System.out, dumpOptions);
     }
 
     @Test
     public void pump() {
         replicator.pump(new File("d:\\SQL\\dump.sql"));
+    }
+
+    private void printCompareResult(CompareResult compareResult) {
+        if (compareResult.getResultType() == CompareResultType.ABSENT_ON_SOURCE) {
+            System.out.println("Absent on source");
+        } else if (compareResult.getResultType() == CompareResultType.ABSENT_ON_TARGET) {
+            System.out.println("Absent on target");
+        } else if (compareResult.getResultType() == CompareResultType.EQUALS) {
+            System.out.println("Equals");
+        } else {
+            compareResult.getDiffs().forEach(diff ->
+                    System.out.println(diff.getKind() + ": "
+                            + '\'' + diff.getSourceValue() + "', "
+                            + '\'' + diff.getTargetValue() + '\''));
+        }
     }
 }

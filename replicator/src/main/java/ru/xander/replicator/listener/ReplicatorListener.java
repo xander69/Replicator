@@ -2,6 +2,9 @@ package ru.xander.replicator.listener;
 
 import java.time.LocalDateTime;
 
+/**
+ * @author Alexander Shakhov
+ */
 public interface ReplicatorListener {
 
     default void warning(String message) {
