@@ -1,10 +1,14 @@
 package ru.xander.replicator.listener;
 
+/**
+ * @author Alexander Shakhov
+ */
 public class Alter {
 
     private AlterType type;
     private String tableName;
     private String objectName;
+    private String extra;
 
     public AlterType getType() {
         return type;
@@ -28,5 +32,13 @@ public class Alter {
 
     public void setObjectName(String objectName) {
         this.objectName = objectName;
+    }
+
+    public String getExtra() {
+        return extra;
+    }
+
+    public void setExtra(String extra) {
+        this.extra = extra;
     }
 }

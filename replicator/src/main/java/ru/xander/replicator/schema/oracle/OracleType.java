@@ -1,9 +1,12 @@
-package ru.xander.replicator.oracle;
+package ru.xander.replicator.schema.oracle;
 
 import ru.xander.replicator.exception.SchemaException;
 import ru.xander.replicator.schema.ColumnType;
 import ru.xander.replicator.schema.IndexType;
 
+/**
+ * @author Alexander Shakhov
+ */
 abstract class OracleType {
     static ColumnType toColumnType(String dataType, int scale) {
         switch (dataType.toUpperCase()) {

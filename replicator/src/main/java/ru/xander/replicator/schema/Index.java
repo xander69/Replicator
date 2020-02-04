@@ -2,6 +2,9 @@ package ru.xander.replicator.schema;
 
 import java.util.List;
 
+/**
+ * @author Alexander Shakhov
+ */
 public class Index {
 
     private Table table;

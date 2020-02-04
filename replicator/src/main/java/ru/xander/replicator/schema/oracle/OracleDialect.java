@@ -1,4 +1,4 @@
-package ru.xander.replicator.oracle;
+package ru.xander.replicator.schema.oracle;
 
 import ru.xander.replicator.exception.SchemaException;
 import ru.xander.replicator.schema.CheckConstraint;
@@ -27,6 +27,9 @@ import java.util.Date;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * @author Alexander Shakhov
+ */
 class OracleDialect {
 
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");

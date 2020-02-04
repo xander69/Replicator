@@ -1,4 +1,4 @@
-package ru.xander.replicator.oracle;
+package ru.xander.replicator.schema.oracle;
 
 import ru.xander.replicator.exception.SchemaException;
 import ru.xander.replicator.listener.AlterType;
@@ -19,14 +19,20 @@ import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.schema.VendorType;
+import ru.xander.replicator.util.StringUtils;
 
 import java.sql.Connection;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import static ru.xander.replicator.listener.AlterType.*;
 
+/**
+ * @author Alexander Shakhov
+ */
 public class OracleSchema extends AbstractSchema {
 
     private final String workSchema;
@@ -82,10 +88,11 @@ public class OracleSchema extends AbstractSchema {
     }
 
     @Override
-    public void modifyColumn(Column column, ModifyType... modifyTypes) {
-        String ddl = dialect.modifyColumnQuery(column, modifyTypes);
-        if (ddl != null) {
-            alter(MODIFY_COLUMN, column.getTable().getName(), column.getName());
+    public void modifyColumn(Column oldColumn, Column newColumn) {
+        ModifyType[] modifyTypes = compareColumn(oldColumn, newColumn);
+        if (modifyTypes.length > 0) {
+            String ddl = dialect.modifyColumnQuery(newColumn, modifyTypes);
+            alter(MODIFY_COLUMN, newColumn.getTable().getName(), newColumn.getName(), Arrays.toString(modifyTypes));
             execute(ddl);
         }
     }
@@ -195,6 +202,7 @@ public class OracleSchema extends AbstractSchema {
         execute(dialect.analyzeTableQuery(table));
     }
 
+    //TODO: порефачить
     @Override
     public Ddl getDdl(Table table) {
         notify("Get DDL for table " + table.getName());
@@ -214,6 +222,7 @@ public class OracleSchema extends AbstractSchema {
         return ddl;
     }
 
+    //TODO: порефачить
     @Override
     public Dml getDml(Table table) {
         notify("Get DML for table " + table.getName());
@@ -388,5 +397,26 @@ public class OracleSchema extends AbstractSchema {
             sequence.setCacheSize(rs.getLong("cache_size"));
             return sequence;
         }));
+    }
+
+    private ModifyType[] compareColumn(Column oldColumn, Column newColumn) {
+        Set<ModifyType> modifyTypes = new HashSet<>();
+        if (oldColumn.getColumnType() != newColumn.getColumnType()) {
+            modifyTypes.add(ModifyType.DATATYPE);
+        }
+        if (oldColumn.getSize() != newColumn.getSize()) {
+            modifyTypes.add(ModifyType.DATATYPE);
+        }
+        if (oldColumn.getScale() != newColumn.getScale()) {
+            modifyTypes.add(ModifyType.DATATYPE);
+        }
+        if (!StringUtils.equalsStringIgnoreWhiteSpace(oldColumn.getDefaultValue(), newColumn.getDefaultValue())) {
+            modifyTypes.add(ModifyType.DEFAULT);
+        }
+        // в Oralce NOT NULL реализован в виде check-констрейнта
+//        if (newColumn.isNullable() != oldColumn.isNullable()) {
+//            modifyTypes.add(ModifyType.MANDATORY);
+//        }
+        return modifyTypes.toArray(new ModifyType[0]);
     }
 }

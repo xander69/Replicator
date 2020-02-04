@@ -1,5 +1,8 @@
 package ru.xander.replicator.exception;
 
+/**
+ * @author Alexander Shakhov
+ */
 public class ReplicatorException extends RuntimeException {
     public ReplicatorException() {
     }

@@ -1,5 +1,8 @@
 package ru.xander.replicator.listener;
 
+/**
+ * @author Alexander Shakhov
+ */
 public enum AlterType {
     CREATE_TABLE,
     CREATE_TABLE_COMMENT,

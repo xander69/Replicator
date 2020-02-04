@@ -8,14 +8,16 @@ import ru.xander.replicator.schema.Ddl;
 import ru.xander.replicator.schema.Dml;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
-import ru.xander.replicator.schema.ModifyType;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.schema.VendorType;
 
-public interface Schema extends AutoCloseable {
+/**
+ * @author Alexander Shakhov
+ */
+public interface Schema {
 
     VendorType getVendorType();
 
@@ -29,7 +31,7 @@ public interface Schema extends AutoCloseable {
 
     void createColumn(Column column);
 
-    void modifyColumn(Column column, ModifyType... modifyTypes);
+    void modifyColumn(Column oldColumn, Column newColumn);
 
     void dropColumn(Column column);
 

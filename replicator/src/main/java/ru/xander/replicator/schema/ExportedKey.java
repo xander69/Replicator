@@ -1,5 +1,8 @@
 package ru.xander.replicator.schema;
 
+/**
+ * @author Alexander Shakhov
+ */
 public class ExportedKey extends Constraint {
 
     private String columnName;

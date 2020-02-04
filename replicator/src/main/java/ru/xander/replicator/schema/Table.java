@@ -5,6 +5,9 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * @author Alexander Shakhov
+ */
 public class Table {
 
     private String schema;

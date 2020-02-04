@@ -1,5 +1,8 @@
 package ru.xander.replicator.schema;
 
+/**
+ * @author Alexander Shakhov
+ */
 public class Column implements Comparable<Column> {
 
     private Table table;
