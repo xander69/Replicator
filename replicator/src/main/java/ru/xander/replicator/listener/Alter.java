@@ -2,30 +2,24 @@ package ru.xander.replicator.listener;
 
 public class Alter {
 
-    private AlterType eventType;
+    private AlterType type;
+    private String tableName;
     private String objectName;
-    private String extra;
 
-    public Alter() {
+    public AlterType getType() {
+        return type;
     }
 
-    public Alter(AlterType eventType, String objectName) {
-        this.eventType = eventType;
-        this.objectName = objectName;
+    public void setType(AlterType type) {
+        this.type = type;
     }
 
-    public Alter(AlterType eventType, String objectName, String extra) {
-        this.eventType = eventType;
-        this.objectName = objectName;
-        this.extra = extra;
+    public String getTableName() {
+        return tableName;
     }
 
-    public AlterType getEventType() {
-        return eventType;
-    }
-
-    public void setEventType(AlterType eventType) {
-        this.eventType = eventType;
+    public void setTableName(String tableName) {
+        this.tableName = tableName;
     }
 
     public String getObjectName() {
@@ -34,13 +28,5 @@ public class Alter {
 
     public void setObjectName(String objectName) {
         this.objectName = objectName;
-    }
-
-    public String getExtra() {
-        return extra;
-    }
-
-    public void setExtra(String extra) {
-        this.extra = extra;
     }
 }

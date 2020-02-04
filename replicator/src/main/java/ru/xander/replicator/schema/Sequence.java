@@ -2,6 +2,7 @@ package ru.xander.replicator.schema;
 
 public class Sequence {
 
+    private Table table;
     private String schema;
     private String name;
     private String minValue;
@@ -9,6 +10,14 @@ public class Sequence {
     private Long incrementBy;
     private Long lastNumber;
     private Long cacheSize;
+
+    public Table getTable() {
+        return table;
+    }
+
+    public void setTable(Table table) {
+        this.table = table;
+    }
 
     public String getSchema() {
         return schema;

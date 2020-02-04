@@ -25,9 +25,9 @@ public class ConsoleListener implements ReplicatorListener, SchemaListener {
     @Override
     public void alter(Alter event) {
         if (event.getExtra() == null) {
-            log.info("{}: {}", event.getEventType(), event.getObjectName());
+            log.info("{}: {}", event.getType(), event.getObjectName());
         } else {
-            log.info("{}: {} ({})", event.getEventType(), event.getObjectName(), event.getExtra());
+            log.info("{}: {} ({})", event.getType(), event.getObjectName(), event.getExtra());
         }
     }
 
