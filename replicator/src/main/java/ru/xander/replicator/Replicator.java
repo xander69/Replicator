@@ -4,11 +4,7 @@ import ru.xander.replicator.compare.CompareDiff;
 import ru.xander.replicator.compare.CompareKind;
 import ru.xander.replicator.compare.CompareResult;
 import ru.xander.replicator.compare.CompareResultType;
-import ru.xander.replicator.exception.QueryFailedException;
 import ru.xander.replicator.exception.ReplicatorException;
-import ru.xander.replicator.listener.Alter;
-import ru.xander.replicator.listener.Progress;
-import ru.xander.replicator.listener.ReplicatorListener;
 import ru.xander.replicator.schema.BatchExecutor;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
@@ -16,7 +12,6 @@ import ru.xander.replicator.schema.Ddl;
 import ru.xander.replicator.schema.Dml;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
-import ru.xander.replicator.schema.ModifyType;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
@@ -29,7 +24,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -37,209 +31,141 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-import static ru.xander.replicator.listener.AlterType.*;
-
+/**
+ * @author Alexander Shakhov
+ */
 public class Replicator {
 
-    private final Schema source;
-    private final Schema target;
-    private final ReplicatorListener listener;
-    private final Set<String> replicatedTables;
-    private final Set<String> droppedTables;
-
-    public Replicator(Schema source, Schema target) {
-        this(source, target, ReplicatorListener.stub);
-    }
-
-    public Replicator(Schema source, Schema target, ReplicatorListener listener) {
-        Objects.requireNonNull(source);
-        Objects.requireNonNull(target);
-        this.source = source;
-        this.target = target;
-        this.listener = listener == null ? ReplicatorListener.stub : listener;
-        this.replicatedTables = new HashSet<>();
-        this.droppedTables = new HashSet<>();
-    }
-
     /**
-     * Создает или обновляет таблицу на схеме-приемнике.
-     *
-     * @param tableName    Имя таблицы
-     * @param withExported Выполнить метод для всех зависимых таблиц
+     * Выполняет репликацию таблицы со схемы источника, на схему приемника.
      */
-    public void replicate(String tableName, boolean withExported) {
-        replicateTable(tableName, withExported);
+    public void replicate(String tableName, ReplicateConfig config) {
+        try (
+                SchemaConnection source = new SchemaConnection(config.getSourceConfig(), config.getListener());
+                SchemaConnection target = new SchemaConnection(config.getTargetConfig(), config.getListener())
+        ) {
+            Set<String> createdTables = new HashSet<>();
+            replicateTable(tableName, source.getSchema(), target.getSchema(), createdTables);
+        }
     }
 
     public void drop(String tableName) {
-        dropTable(tableName);
+        //TODO:
+//        dropTable(tableName);
     }
 
     public CompareResult compare(String tableName) {
-        return compareTable(tableName);
+        //TODO:
+//        return compareTable(tableName);
+        return null;
     }
 
     public void dump(String tableName, OutputStream output, DumpOptions dumpOptions) {
-        dumpTable(tableName, output, dumpOptions);
+        //TODO:
+//        dumpTable(tableName, output, dumpOptions);
     }
 
     public void pump(File scriptFile) {
-        pumpScript(scriptFile);
+        //TODO:
+//        pumpScript(scriptFile);
     }
 
-    private void replicateTable(String tableName, boolean withExported) {
-        if (replicatedTables.contains(tableName)) {
+    private void replicateTable(String tableName, Schema source, Schema target, Set<String> createdTables) {
+        if (createdTables.contains(tableName)) {
             return;
         }
-        replicatedTables.add(tableName);
-        droppedTables.remove(tableName);
+
+        createdTables.add(tableName);
 
         Table sourceTable = source.getTable(tableName);
         if (sourceTable == null) {
-            listener.warning("Table " + tableName + " not found on source");
-            return;
+            throw new ReplicatorException("Table " + tableName + " not found on source");
         }
+
+        sourceTable.getImportedKeys().forEach(importedKey -> {
+            String pkTableName = importedKey.getPkTableName();
+            replicateTable(pkTableName, source, target, createdTables);
+        });
+
         Table targetTable = target.getTable(tableName);
         if (targetTable == null) {
-            createTable(sourceTable, withExported);
+            createTable(target, sourceTable);
         } else {
-            updateTable(targetTable, sourceTable, withExported);
+            updateTable(target, targetTable, sourceTable);
         }
     }
 
-    private void createTable(Table table, boolean withExported) {
-        replicateImportTables(table);
-
-        listener.alter(new Alter(CREATE_TABLE, table.getName()));
+    private void createTable(Schema target, Table table) {
         target.createTable(table);
         if (!StringUtils.isEmpty(table.getComment())) {
-            listener.alter(new Alter(CREATE_TABLE_COMMENT, table.getName()));
             target.createTableComment(table);
         }
-        table.getColumns().forEach(column -> {
-            listener.alter(new Alter(CREATE_COLUMN_COMMENT, column.getName()));
-            target.createColumnComment(column);
-        });
+        table.getColumns().forEach(target::createColumnComment);
         PrimaryKey primaryKey = table.getPrimaryKey();
         if (primaryKey != null) {
-            listener.alter(new Alter(CREATE_PRIMARY_KEY, primaryKey.getName()));
             target.createPrimaryKey(primaryKey);
         }
-        table.getImportedKeys().forEach(importedKey -> {
-            listener.alter(new Alter(CREATE_IMPORTED_KEY, importedKey.getName()));
-            target.createImportedKey(importedKey);
-        });
-        table.getCheckConstraints().forEach(checkConstraint -> {
-            listener.alter(new Alter(CREATE_CHECK_CONSTRAINT, checkConstraint.getName()));
-            target.createCheckConstraint(checkConstraint);
-        });
-        table.getIndices().forEach(index -> {
-            listener.alter(new Alter(CREATE_INDEX, index.getName()));
-            target.createIndex(index);
-        });
+        table.getImportedKeys().forEach(target::createImportedKey);
+        table.getCheckConstraints().forEach(target::createCheckConstraint);
+        table.getIndices().forEach(target::createIndex);
+        // TODO: триггеры и сиквенсы спрятать в схему. ввести тип данных Serial
         // Триггеры создаем только на идентичных схемах
-        if (source.getVendorType() == target.getVendorType()) {
-            table.getTriggers().forEach(trigger -> {
-                listener.alter(new Alter(CREATE_TRIGGER, trigger.getName()));
-                target.createTrigger(trigger);
-            });
-        }
-        Sequence sequence = table.getSequence();
-        if (sequence != null) {
-            listener.alter(new Alter(CREATE_SEQUENCE, sequence.getName()));
-            target.createSequence(sequence);
-        }
-        listener.alter(new Alter(ANALYZE_TABLE, table.getName()));
+//        if (source.getVendorType() == target.getVendorType()) {
+//            table.getTriggers().forEach(target::createTrigger);
+//        }
+//        Sequence sequence = table.getSequence();
+//        if (sequence != null) {
+//            target.createSequence(sequence);
+//        }
         target.analyzeTable(table);
-
-        if (withExported) {
-            replicateExportTables(table);
-        }
     }
 
-    private void replicateImportTables(Table table) {
-        table.getImportedKeys().forEach(importedKey -> {
-            // бывает, таблица ссылается сама на себя. в этом случае не надо её снова создавать
-            if (!Objects.equals(table.getName(), importedKey.getPkTableName())) {
-                replicateTable(importedKey.getPkTableName(), false);
-            }
-        });
+    private void updateTable(Schema target, Table targetTable, Table sourceTable) {
+        updateColumns(target, targetTable, sourceTable);
+        updatePrimaryKey(target, targetTable, sourceTable);
+        updateImportedKeys(target, targetTable, sourceTable);
+        updateCheckConstraints(target, targetTable, sourceTable);
+        updateIndices(target, targetTable, sourceTable);
+        updateComments(target, targetTable, sourceTable);
     }
 
-    private void replicateExportTables(Table table) {
-        table.getExportedKeys().forEach(exportedKey -> {
-            // бывает, таблица ссылается сама на себя. в этом случае не надо её снова создавать
-            if (!Objects.equals(table.getName(), exportedKey.getFkTableName())) {
-                replicateTable(exportedKey.getFkTableName(), false);
-            }
-        });
-    }
-
-    private void updateTable(Table targetTable, Table sourceTable, boolean withExported) {
-        replicatedTables.add(targetTable.getName());
-        droppedTables.remove(targetTable.getName());
-
-        replicateImportTables(sourceTable);
-
-        updateColumns(targetTable, sourceTable);
-        updatePrimaryKey(targetTable, sourceTable);
-        updateImportedKeys(targetTable, sourceTable);
-        updateCheckConstraints(targetTable, sourceTable);
-        updateIndexes(targetTable, sourceTable);
-        // Триггеры обновляем только на идентичных схемах
-        if (source.getVendorType() == target.getVendorType()) {
-            updateTriggers(targetTable, sourceTable);
-        }
-        updateSequence(targetTable, sourceTable);
-        updateComments(targetTable, sourceTable);
-
-        if (withExported) {
-            replicateExportTables(sourceTable);
-        }
-    }
-
-    private void updateColumns(Table targetTable, Table sourceTable) {
+    private void updateColumns(Schema target, Table targetTable, Table sourceTable) {
         Map<String, Column> sourceColumns = sourceTable.getColumnMap();
         Map<String, Column> targetColumns = targetTable.getColumnMap();
-        targetColumns.forEach((columnName, targetColumn) -> {
-            if (!sourceColumns.containsKey(columnName)) {
-                listener.alter(new Alter(DROP_COLUMN, columnName));
-                target.dropColumn(targetColumn);
-            }
-        });
+
+        List<Column> columnsToDrop = targetColumns.values().stream()
+                .filter(column -> !sourceColumns.containsKey(column.getName()))
+                .collect(Collectors.toList());
+        columnsToDrop.forEach(target::dropColumn);
+        columnsToDrop.forEach(targetTable::removeColumn);
+
         sourceColumns.forEach((columnName, sourceColumn) -> {
             Column targetColumn = targetColumns.get(columnName);
             if (targetColumn == null) {
-                listener.alter(new Alter(CREATE_COLUMN, columnName));
                 target.createColumn(sourceColumn);
             } else {
-                ModifyType[] modifyTypes = compareColumn(sourceColumn, targetColumn);
-                if (modifyTypes.length > 0) {
-                    listener.alter(new Alter(MODIFY_COLUMN, columnName, Arrays.toString(modifyTypes)));
-                    target.modifyColumn(sourceColumn, modifyTypes);
-                }
+                target.modifyColumn(targetColumn, sourceColumn);
             }
+            targetTable.addColumn(sourceColumn);
         });
     }
 
-    private void updatePrimaryKey(Table targetTable, Table sourceTable) {
+    private void updatePrimaryKey(Schema target, Table targetTable, Table sourceTable) {
         PrimaryKey sourcePrimaryKey = sourceTable.getPrimaryKey();
         PrimaryKey targetPrimaryKey = targetTable.getPrimaryKey();
         if ((targetPrimaryKey == null) && (sourcePrimaryKey == null)) {
             return;
         }
         if (sourcePrimaryKey == null) {
-            listener.alter(new Alter(DROP_PRIMARY_KEY, targetPrimaryKey.getName()));
-            //TODO: констрейнты удаляются вместе со столбцом
-            // т.к. столбцы удаляются первее, поэтому здесь можем словить exception,
-            // надо подумать, как сделать по-умному
-            suppressException(() -> target.dropPrimaryKey(targetPrimaryKey));
+            target.dropPrimaryKey(targetPrimaryKey);
+            targetTable.setPrimaryKey(null);
             return;
         }
         if (targetPrimaryKey == null) {
-            listener.alter(new Alter(CREATE_PRIMARY_KEY, sourcePrimaryKey.getName()));
             target.createPrimaryKey(sourcePrimaryKey);
+            targetTable.setPrimaryKey(sourcePrimaryKey);
             return;
         }
         if (Objects.equals(sourcePrimaryKey.getName(), targetPrimaryKey.getName())) {
@@ -249,217 +175,189 @@ public class Replicator {
         // Нужно пересоздать его с новым именем
         target.dropPrimaryKey(targetPrimaryKey);
         target.createPrimaryKey(sourcePrimaryKey);
+        targetTable.setPrimaryKey(sourcePrimaryKey);
     }
 
-    private void updateImportedKeys(Table targetTable, Table sourceTable) {
+    private void updateImportedKeys(Schema target, Table targetTable, Table sourceTable) {
         Map<String, ImportedKey> sourceImportedKeys = sourceTable.getImportedKeyMap();
         Map<String, ImportedKey> targetImportedKeys = targetTable.getImportedKeyMap();
-        targetImportedKeys.forEach((importedKeyName, targetImportedKey) -> {
-            if (!sourceImportedKeys.containsKey(importedKeyName)) {
-                listener.alter(new Alter(DROP_CONSTRAINT, importedKeyName));
-                //TODO: констрейнты удаляются вместе со столбцом
-                // т.к. столбцы удаляются первее, поэтому здесь можем словить exception,
-                // надо подумать, как сделать по-умному
-                suppressException(() -> target.dropConstraint(targetImportedKey));
-            }
-        });
+
+        List<ImportedKey> importedKeysToDrop = targetImportedKeys.values().stream()
+                .filter(importedKey -> !sourceImportedKeys.containsKey(importedKey.getName()))
+                .collect(Collectors.toList());
+
+        importedKeysToDrop.forEach(target::dropConstraint);
+        importedKeysToDrop.forEach(targetTable::removeImportedKey);
+
         sourceImportedKeys.forEach((importedKeyName, sourceImportedKey) -> {
             if (!targetImportedKeys.containsKey(importedKeyName)) {
-                listener.alter(new Alter(CREATE_IMPORTED_KEY, importedKeyName));
                 target.createImportedKey(sourceImportedKey);
+                targetTable.addImportedKey(sourceImportedKey);
             }
         });
     }
 
-    private void updateCheckConstraints(Table targetTable, Table sourceTable) {
+    private void updateCheckConstraints(Schema target, Table targetTable, Table sourceTable) {
         Map<String, CheckConstraint> sourceCheckConstraints = sourceTable.getCheckConstraintMap();
         Map<String, CheckConstraint> targetCheckConstraints = targetTable.getCheckConstraintMap();
-        targetCheckConstraints.forEach((constraintName, targetCheckConstraint) -> {
-            if (!sourceCheckConstraints.containsKey(constraintName)) {
-                listener.alter(new Alter(DROP_CONSTRAINT, constraintName));
-                //TODO: констрейнты удаляются вместе со столбцом
-                // т.к. столбцы удаляются первее, поэтому здесь можем словить exception,
-                // надо подумать, как сделать по-умному
-                suppressException(() -> target.dropConstraint(targetCheckConstraint));
-            }
-        });
+
+        List<CheckConstraint> checkConstraintsToDrop = targetCheckConstraints.values().stream()
+                .filter(checkConstraint -> !sourceCheckConstraints.containsKey(checkConstraint.getName()))
+                .collect(Collectors.toList());
+
+        checkConstraintsToDrop.forEach(target::dropConstraint);
+        checkConstraintsToDrop.forEach(targetTable::removeCheckConstraint);
+
         sourceCheckConstraints.forEach((constraintName, sourceCheckConstraint) -> {
             if (!targetCheckConstraints.containsKey(constraintName)) {
-                listener.alter(new Alter(CREATE_CHECK_CONSTRAINT, constraintName));
-                suppressException(() -> target.createCheckConstraint(sourceCheckConstraint));
+                target.createCheckConstraint(sourceCheckConstraint);
+                targetTable.addCheckConstraint(sourceCheckConstraint);
             }
         });
     }
 
-    private void updateIndexes(Table targetTable, Table sourceTable) {
+    private void updateIndices(Schema target, Table targetTable, Table sourceTable) {
         Map<String, Index> sourceIndexes = sourceTable.getIndexMap();
         Map<String, Index> targetIndexes = targetTable.getIndexMap();
-        targetIndexes.forEach((indexName, targetIndex) -> {
-            if (!sourceIndexes.containsKey(indexName)) {
-                listener.alter(new Alter(DROP_INDEX, indexName));
-                //TODO: индексы удаляются вместе со столбцом
-                // т.к. столбцы удаляются первее, поэтому здесь можем словить exception,
-                // надо подумать, как сделать по-умному
-                suppressException(() -> target.dropIndex(targetIndex));
-            }
-        });
+
+        List<Index> indicesToDrop = targetIndexes.values().stream()
+                .filter(index -> !sourceIndexes.containsKey(index.getName()))
+                .collect(Collectors.toList());
+
+        indicesToDrop.forEach(target::dropIndex);
+        indicesToDrop.forEach(targetTable::removeIndex);
+
         sourceIndexes.forEach((indexName, sourceIndex) -> {
             if (!targetIndexes.containsKey(indexName)) {
-                listener.alter(new Alter(CREATE_INDEX, indexName));
                 target.createIndex(sourceIndex);
+                targetTable.addIndex(sourceIndex);
             }
         });
     }
 
-    private void updateTriggers(Table targetTable, Table sourceTable) {
-        Map<String, Trigger> sourceTriggers = sourceTable.getTriggerMap();
-        Map<String, Trigger> targetTriggers = targetTable.getTriggerMap();
-        targetTriggers.forEach((triggerName, targetTrigger) -> {
-            if (!sourceTriggers.containsKey(triggerName)) {
-                listener.alter(new Alter(DROP_TRIGGER, triggerName));
-                target.dropTrigger(targetTrigger);
-            }
-        });
-        sourceTriggers.forEach((triggerName, sourceTrigger) -> {
-            Trigger targetTrigger = targetTriggers.get(triggerName);
-            if (targetTrigger == null) {
-                listener.alter(new Alter(CREATE_TRIGGER, triggerName));
-                target.createTrigger(sourceTrigger);
-            } else if (!StringUtils.equalsStringIgnoreWhiteSpace(sourceTrigger.getBody(), targetTrigger.getBody())) {
-                listener.alter(new Alter(CREATE_TRIGGER, triggerName));
-                target.createTrigger(sourceTrigger);
-            }
-        });
-    }
+//    private void updateTriggers(Table targetTable, Table sourceTable) {
+//        Map<String, Trigger> sourceTriggers = sourceTable.getTriggerMap();
+//        Map<String, Trigger> targetTriggers = targetTable.getTriggerMap();
+//        targetTriggers.forEach((triggerName, targetTrigger) -> {
+//            if (!sourceTriggers.containsKey(triggerName)) {
+//                listener.alter(new Alter(DROP_TRIGGER, triggerName));
+//                target.dropTrigger(targetTrigger);
+//            }
+//        });
+//        sourceTriggers.forEach((triggerName, sourceTrigger) -> {
+//            Trigger targetTrigger = targetTriggers.get(triggerName);
+//            if (targetTrigger == null) {
+//                listener.alter(new Alter(CREATE_TRIGGER, triggerName));
+//                target.createTrigger(sourceTrigger);
+//            } else if (!StringUtils.equalsStringIgnoreWhiteSpace(sourceTrigger.getBody(), targetTrigger.getBody())) {
+//                listener.alter(new Alter(CREATE_TRIGGER, triggerName));
+//                target.createTrigger(sourceTrigger);
+//            }
+//        });
+//    }
+//
+//    private void updateSequence(Table targetTable, Table sourceTable) {
+//        Sequence sourceSequence = sourceTable.getSequence();
+//        Sequence targetSequence = targetTable.getSequence();
+//        if ((targetSequence == null) && (sourceSequence == null)) {
+//            return;
+//        }
+//        if (sourceSequence == null) {
+//            listener.alter(new Alter(DROP_SEQUENCE, targetSequence.getName()));
+//            target.dropSequence(targetSequence);
+//            return;
+//        }
+//        if (targetTable.getSequence() == null) {
+//            listener.alter(new Alter(CREATE_SEQUENCE, sourceSequence.getName()));
+//            target.createSequence(sourceSequence);
+//            return;
+//        }
+//        if (Objects.equals(sourceSequence.getName(), targetSequence.getName())) {
+//            return;
+//        }
+//
+//        // Сюда по идее попадаем, когда сиквенс у таблицы есть, но назван по-другому
+//        // Нужно пересоздать его с новым именем
+//        listener.alter(new Alter(DROP_SEQUENCE, targetSequence.getName()));
+//        target.dropSequence(targetSequence);
+//        listener.alter(new Alter(CREATE_SEQUENCE, sourceSequence.getName()));
+//        target.createSequence(sourceSequence);
+//    }
 
-    private void updateSequence(Table targetTable, Table sourceTable) {
-        Sequence sourceSequence = sourceTable.getSequence();
-        Sequence targetSequence = targetTable.getSequence();
-        if ((targetSequence == null) && (sourceSequence == null)) {
-            return;
-        }
-        if (sourceSequence == null) {
-            listener.alter(new Alter(DROP_SEQUENCE, targetSequence.getName()));
-            target.dropSequence(targetSequence);
-            return;
-        }
-        if (targetTable.getSequence() == null) {
-            listener.alter(new Alter(CREATE_SEQUENCE, sourceSequence.getName()));
-            target.createSequence(sourceSequence);
-            return;
-        }
-        if (Objects.equals(sourceSequence.getName(), targetSequence.getName())) {
-            return;
-        }
-
-        // Сюда по идее попадаем, когда сиквенс у таблицы есть, но назван по-другому
-        // Нужно пересоздать его с новым именем
-        listener.alter(new Alter(DROP_SEQUENCE, targetSequence.getName()));
-        target.dropSequence(targetSequence);
-        listener.alter(new Alter(CREATE_SEQUENCE, sourceSequence.getName()));
-        target.createSequence(sourceSequence);
-    }
-
-    private void updateComments(Table targetTable, Table sourceTable) {
+    private void updateComments(Schema target, Table targetTable, Table sourceTable) {
         if (!StringUtils.equalsStringIgnoreWhiteSpace(targetTable.getComment(), sourceTable.getComment())) {
-            listener.alter(new Alter(CREATE_TABLE_COMMENT, sourceTable.getName()));
             target.createTableComment(sourceTable);
+            targetTable.setComment(sourceTable.getComment());
         }
         Map<String, Column> targetColumns = targetTable.getColumnMap();
         sourceTable.getColumns().forEach(sourceColumn -> {
-            //TODO: бывает, столбец добавляется в процессе обновления таблицы
-            // в это случае columnMap не обновляется, поэтому здесь можем схватить NPE
-            // по идее при создании столбца (да и прочих структур) надо как-то обновлять эту инфу в Table
-            // пока закостылил простой проверкой на null - что не правильно
             Column targetColumn = targetColumns.get(sourceColumn.getName());
             if (targetColumn != null) {
                 if (!StringUtils.equalsStringIgnoreWhiteSpace(sourceColumn.getComment(), targetColumn.getComment())) {
-                    listener.alter(new Alter(CREATE_COLUMN_COMMENT, sourceColumn.getName()));
                     target.createColumnComment(sourceColumn);
                 }
             }
         });
     }
 
-    private ModifyType[] compareColumn(Column sourceColumn, Column targetColumn) {
-        Set<ModifyType> modifyTypes = new HashSet<>();
-        if (sourceColumn.getColumnType() != targetColumn.getColumnType()) {
-            modifyTypes.add(ModifyType.DATATYPE);
-        }
-        if (sourceColumn.getSize() != targetColumn.getSize()) {
-            modifyTypes.add(ModifyType.DATATYPE);
-        }
-        if (sourceColumn.getScale() != targetColumn.getScale()) {
-            modifyTypes.add(ModifyType.DATATYPE);
-        }
-        if (!StringUtils.equalsStringIgnoreWhiteSpace(sourceColumn.getDefaultValue(), targetColumn.getDefaultValue())) {
-            modifyTypes.add(ModifyType.DEFAULT);
-        }
-        if (targetColumn.isNullable() != sourceColumn.isNullable()) {
-            modifyTypes.add(ModifyType.MANDATORY);
-        }
-        return modifyTypes.toArray(new ModifyType[0]);
-    }
-
-    private void dropTable(String tableName) {
+    private void dropTable(Schema target, String tableName) {
         Table targetTable = target.getTable(tableName);
         if (targetTable == null) {
-            listener.warning("Table " + tableName + " not found on target.");
-            return;
+            throw new ReplicatorException("Table " + tableName + " not found on target.");
         }
-        dropTable(targetTable);
+        dropTable(target, targetTable);
     }
 
-    private void dropTable(Table table) {
-        if (droppedTables.contains(table.getName())) {
-            return;
-        }
-        droppedTables.add(table.getName());
-        replicatedTables.remove(table.getName());
+    private void dropTable(Schema target, Table table) {
+//        if (droppedTables.contains(table.getName())) {
+//            return;
+//        }
+//        droppedTables.add(table.getName());
+//        replicatedTables.remove(table.getName());
 
-        dropExportTables(table);
+        dropExportTables(target, table);
 
         PrimaryKey primaryKey = table.getPrimaryKey();
         if (primaryKey != null) {
-            listener.alter(new Alter(DROP_PRIMARY_KEY, primaryKey.getName()));
+//            listener.alter(new Alter(DROP_PRIMARY_KEY, primaryKey.getName()));
             target.dropPrimaryKey(primaryKey);
         }
         table.getImportedKeys().forEach(importedKey -> {
-            listener.alter(new Alter(DROP_CONSTRAINT, importedKey.getName()));
+//            listener.alter(new Alter(DROP_CONSTRAINT, importedKey.getName()));
             target.dropConstraint(importedKey);
         });
         table.getCheckConstraints().forEach(checkConstraint -> {
-            listener.alter(new Alter(DROP_CONSTRAINT, checkConstraint.getName()));
+//            listener.alter(new Alter(DROP_CONSTRAINT, checkConstraint.getName()));
             target.dropConstraint(checkConstraint);
         });
         table.getIndices().forEach(index -> {
-            listener.alter(new Alter(DROP_INDEX, index.getName()));
+//            listener.alter(new Alter(DROP_INDEX, index.getName()));
             target.dropIndex(index);
         });
         table.getTriggers().forEach(trigger -> {
-            listener.alter(new Alter(DROP_TRIGGER, trigger.getName()));
+//            listener.alter(new Alter(DROP_TRIGGER, trigger.getName()));
             target.dropTrigger(trigger);
         });
         Sequence sequence = table.getSequence();
         if (sequence != null) {
-            listener.alter(new Alter(DROP_SEQUENCE, sequence.getName()));
+//            listener.alter(new Alter(DROP_SEQUENCE, sequence.getName()));
             target.dropSequence(sequence);
         }
 
-        listener.alter(new Alter(DROP_TABLE, table.getName()));
+//        listener.alter(new Alter(DROP_TABLE, table.getName()));
         target.dropTable(table);
     }
 
-    private void dropExportTables(Table table) {
+    private void dropExportTables(Schema target, Table table) {
         table.getExportedKeys().forEach(exportedKey -> {
             // бывает, таблица ссылается сама на себя. в этом случае не надо её снова удалять
             if (!Objects.equals(table.getName(), exportedKey.getFkTableName())) {
-                dropTable(exportedKey.getFkTableName());
+                dropTable(target, exportedKey.getFkTableName());
             }
         });
     }
 
-    private CompareResult compareTable(String tableName) {
+    private CompareResult compareTable(Schema target, Schema source, String tableName) {
         Table sourceTable = source.getTable(tableName);
         if (sourceTable == null) {
             return new CompareResult(CompareResultType.ABSENT_ON_SOURCE, Collections.emptyList());
@@ -498,33 +396,33 @@ public class Replicator {
             if (targetColumn == null) {
                 diffs.add(new CompareDiff(CompareKind.COLUMN_ABSENT_ON_TARGET, columnName, null));
             } else {
-                ModifyType[] modifyTypes = compareColumn(sourceColumn, targetColumn);
-                for (ModifyType modifyType : modifyTypes) {
-                    switch (modifyType) {
-                        case DATATYPE:
-                            String sourceDatatype = sourceColumn.getColumnType()
-                                    + ", size: " + sourceColumn.getSize()
-                                    + ", scale: " + sourceColumn.getScale();
-                            String targetDatatype = targetColumn.getColumnType()
-                                    + ", size: " + targetColumn.getSize()
-                                    + ", scale: " + targetColumn.getScale();
-                            diffs.add(new CompareDiff(CompareKind.COLUMN_DATATYPE, sourceDatatype, targetDatatype));
-                            break;
-                        case MANDATORY:
-                            diffs.add(new CompareDiff(CompareKind.COLUMN_MANDATORY,
-                                    String.valueOf(sourceColumn.isNullable()),
-                                    String.valueOf(targetColumn.isNullable())));
-                            break;
-                        case DEFAULT:
-                            diffs.add(new CompareDiff(CompareKind.COLUMN_DEFAULT,
-                                    sourceColumn.getDefaultValue(),
-                                    targetColumn.getDefaultValue()));
-                            break;
-                    }
-                }
-                if (!StringUtils.equalsStringIgnoreWhiteSpace(sourceColumn.getComment(), targetColumn.getComment())) {
-                    diffs.add(new CompareDiff(CompareKind.COLUMN_COMMENT, sourceColumn.getComment(), targetColumn.getComment()));
-                }
+//                ModifyType[] modifyTypes = compareColumn(sourceColumn, targetColumn);
+//                for (ModifyType modifyType : modifyTypes) {
+//                    switch (modifyType) {
+//                        case DATATYPE:
+//                            String sourceDatatype = sourceColumn.getColumnType()
+//                                    + ", size: " + sourceColumn.getSize()
+//                                    + ", scale: " + sourceColumn.getScale();
+//                            String targetDatatype = targetColumn.getColumnType()
+//                                    + ", size: " + targetColumn.getSize()
+//                                    + ", scale: " + targetColumn.getScale();
+//                            diffs.add(new CompareDiff(CompareKind.COLUMN_DATATYPE, sourceDatatype, targetDatatype));
+//                            break;
+//                        case MANDATORY:
+//                            diffs.add(new CompareDiff(CompareKind.COLUMN_MANDATORY,
+//                                    String.valueOf(sourceColumn.isNullable()),
+//                                    String.valueOf(targetColumn.isNullable())));
+//                            break;
+//                        case DEFAULT:
+//                            diffs.add(new CompareDiff(CompareKind.COLUMN_DEFAULT,
+//                                    sourceColumn.getDefaultValue(),
+//                                    targetColumn.getDefaultValue()));
+//                            break;
+//                    }
+//                }
+//                if (!StringUtils.equalsStringIgnoreWhiteSpace(sourceColumn.getComment(), targetColumn.getComment())) {
+//                    diffs.add(new CompareDiff(CompareKind.COLUMN_COMMENT, sourceColumn.getComment(), targetColumn.getComment()));
+//                }
             }
         });
         targetColumns.forEach((columnName, targetColumn) -> {
@@ -691,11 +589,11 @@ public class Replicator {
         }
     }
 
-    private void dumpTable(String tableName, OutputStream output, DumpOptions dumpOptions) {
+    private void dumpTable(Schema source, String tableName, OutputStream output, DumpOptions dumpOptions) {
         Table sourceTable = source.getTable(tableName);
         if (sourceTable == null) {
-            listener.warning("Table " + tableName + " not found on source");
-            return;
+            throw new ReplicatorException("Table " + tableName + " not found on source");
+//            return;
         }
         try {
             if (dumpOptions.isDumpDdl()) {
@@ -703,11 +601,11 @@ public class Replicator {
                 dumpTableDdl(ddl, output, dumpOptions);
                 if (dumpOptions.isDumpDml()) {
                     output.write('\n');
-                    dumpTableDml(sourceTable, output, dumpOptions);
+                    dumpTableDml(source, sourceTable, output, dumpOptions);
                 }
                 dumpTableObjectsDdl(ddl, output, dumpOptions);
             } else if (dumpOptions.isDumpDml()) {
-                dumpTableDml(sourceTable, output, dumpOptions);
+                dumpTableDml(source, sourceTable, output, dumpOptions);
             }
         } catch (Exception e) {
             String errorMessage = "Failed to dump table " + tableName + ": " + e.getMessage();
@@ -757,7 +655,7 @@ public class Replicator {
         output.write('\n');
     }
 
-    private void dumpTableDml(Table sourceTable, OutputStream output, DumpOptions dumpOptions) throws IOException {
+    private void dumpTableDml(Schema source, Table sourceTable, OutputStream output, DumpOptions dumpOptions) throws IOException {
         final Charset charset = dumpOptions.getCharset();
         final long verboseEach = dumpOptions.getVerboseEach();
         final long commitEach = dumpOptions.getCommitEach();
@@ -777,7 +675,8 @@ public class Replicator {
                     output.write('\n');
                 }
                 if ((currentRow % verboseEach) == 0) {
-                    listener.progress(new Progress(currentRow, totalRows, "Dump table " + sourceTable.getName() + " from source"));
+                    //TODO:
+//                    listener.progress(new Progress(currentRow, totalRows, "Dump table " + sourceTable.getName() + " from source"));
                 }
             }
             if ((commitEach == 0) || ((currentRow % commitEach) != 0)) {
@@ -788,7 +687,7 @@ public class Replicator {
         }
     }
 
-    private void pumpScript(File scriptFile) {
+    private void pumpScript(Schema target, File scriptFile) {
         long fileSize = scriptFile.length();
         long verboseStep = 1024L * 1024L;//(long) (fileSize / 1000.0d);
         int lineNumber = 0;
@@ -835,7 +734,8 @@ public class Replicator {
                 }
 
                 if (readBatch >= verboseStep) {
-                    listener.progress(new Progress(readBytes, fileSize, "Pump script " + scriptFile.getName() + " to target"));
+                    //TODO:
+//                    listener.progress(new Progress(readBytes, fileSize, "Pump script " + scriptFile.getName() + " to target"));
                     readBatch = 0;
                 }
             }
@@ -846,13 +746,13 @@ public class Replicator {
         }
     }
 
-    private void suppressException(Runnable runnable) {
-        try {
-            runnable.run();
-        } catch (QueryFailedException e) {
-            listener.warning(e.getOrigMessage());
-        } catch (Exception e) {
-            listener.warning(e.getMessage());
-        }
-    }
+//    private void suppressException(Runnable runnable) {
+//        try {
+//            runnable.run();
+//        } catch (QueryFailedException e) {
+//            listener.warning(e.getOrigMessage());
+//        } catch (Exception e) {
+//            listener.warning(e.getMessage());
+//        }
+//    }
 }

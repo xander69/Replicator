@@ -19,7 +19,9 @@ public class Table {
     private Map<String, ExportedKey> exportedKeyMap;
     private Map<String, CheckConstraint> checkConstraintMap;
     private Map<String, Index> indexMap;
+    @Deprecated
     private Map<String, Trigger> triggerMap;
+    @Deprecated
     private Sequence sequence;
     //TODO: реализовать поддержку партиций
     private VendorType vendorType;
@@ -84,6 +86,20 @@ public class Table {
         columnMap.put(column.getName(), column);
     }
 
+    public void removeColumn(Column column) {
+        if (columnMap == null) {
+            return;
+        }
+        columnMap.remove(column.getName());
+        if ((primaryKey != null) && primaryKey.getColumnName().equals(column.getName())) {
+            primaryKey = null;
+        }
+        importedKeyMap.entrySet().removeIf(e -> e.getValue().getColumnName().equals(column.getName()));
+        exportedKeyMap.entrySet().removeIf(e -> e.getValue().getColumnName().equals(column.getName()));
+        checkConstraintMap.entrySet().removeIf(e -> e.getValue().getColumnName().equals(column.getName()));
+        indexMap.entrySet().removeIf(e -> e.getValue().getColumns().contains(column.getName()));
+    }
+
     public PrimaryKey getPrimaryKey() {
         return primaryKey;
     }
@@ -120,6 +136,13 @@ public class Table {
         importedKeyMap.put(importedKey.getName(), importedKey);
     }
 
+    public void removeImportedKey(ImportedKey importedKey) {
+        if (importedKeyMap == null) {
+            return;
+        }
+        importedKeyMap.remove(importedKey.getName());
+    }
+
     public Map<String, ExportedKey> getExportedKeyMap() {
         if (exportedKeyMap == null) {
             return Collections.emptyMap();
@@ -146,6 +169,13 @@ public class Table {
             exportedKeyMap = new LinkedHashMap<>();
         }
         exportedKeyMap.put(exportedKey.getFkName(), exportedKey);
+    }
+
+    public void removeExportedKey(ExportedKey exportedKey) {
+        if (exportedKeyMap == null) {
+            return;
+        }
+        exportedKeyMap.remove(exportedKey.getName());
     }
 
     public Map<String, CheckConstraint> getCheckConstraintMap() {
@@ -176,6 +206,13 @@ public class Table {
         checkConstraintMap.put(checkConstraint.getName(), checkConstraint);
     }
 
+    public void removeCheckConstraint(CheckConstraint checkConstraint) {
+        if (checkConstraintMap == null) {
+            return;
+        }
+        checkConstraintMap.remove(checkConstraint.getName());
+    }
+
     public Map<String, Index> getIndexMap() {
         if (indexMap == null) {
             return Collections.emptyMap();
@@ -202,6 +239,13 @@ public class Table {
             indexMap = new LinkedHashMap<>();
         }
         indexMap.put(index.getName(), index);
+    }
+
+    public void removeIndex(Index index) {
+        if (indexMap == null) {
+            return;
+        }
+        indexMap.remove(index.getName());
     }
 
     public Map<String, Trigger> getTriggerMap() {

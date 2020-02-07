@@ -51,4 +51,54 @@ public class SchemaConfig {
         this.workSchema = workSchema;
     }
 
+    public static SchemaConfigBuilder builder() {
+        return new SchemaConfigBuilder();
+    }
+
+    public static class SchemaConfigBuilder {
+
+        private String jdbcDriver;
+        private String jdbcUrl;
+        private String username;
+        private String password;
+        private String workSchema;
+
+        private SchemaConfigBuilder() {
+        }
+
+        public SchemaConfigBuilder jdbcDriver(String jdbcDriver) {
+            this.jdbcDriver = jdbcDriver;
+            return this;
+        }
+
+        public SchemaConfigBuilder jdbcUrl(String jdbcUrl) {
+            this.jdbcUrl = jdbcUrl;
+            return this;
+        }
+
+        public SchemaConfigBuilder username(String username) {
+            this.username = username;
+            return this;
+        }
+
+        public SchemaConfigBuilder password(String password) {
+            this.password = password;
+            return this;
+        }
+
+        public SchemaConfigBuilder workSchema(String workSchema) {
+            this.workSchema = workSchema;
+            return this;
+        }
+
+        public SchemaConfig build() {
+            SchemaConfig schemaConfig = new SchemaConfig();
+            schemaConfig.setJdbcDriver(jdbcDriver);
+            schemaConfig.setJdbcUrl(jdbcUrl);
+            schemaConfig.setUsername(username);
+            schemaConfig.setPassword(password);
+            schemaConfig.setWorkSchema(workSchema);
+            return schemaConfig;
+        }
+    }
 }

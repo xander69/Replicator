@@ -19,22 +19,6 @@ public class ReplicateConfig {
      * Конфигурация схемы-приемника.
      */
     private SchemaConfig targetConfig;
-    /**
-     * Выполнять репликацию структуры.
-     */
-    private boolean replicateDdl = true;
-    /**
-     * Выполнять репликацию данных.
-     */
-    private boolean replicateDml = false;
-    /**
-     * Реплицировать зависимые таблицы.
-     */
-    private boolean replicateImported = false;
-    /**
-     * Обновлять зависимости.
-     */
-    private boolean updateExported = true;
 
     public Listener getListener() {
         return listener;
@@ -60,35 +44,39 @@ public class ReplicateConfig {
         this.targetConfig = targetConfig;
     }
 
-    public boolean isReplicateDdl() {
-        return replicateDdl;
+    public static ReplicateConfigBuilder builder() {
+        return new ReplicateConfigBuilder();
     }
 
-    public void setReplicateDdl(boolean replicateDdl) {
-        this.replicateDdl = replicateDdl;
-    }
+    public static class ReplicateConfigBuilder {
+        private Listener listener;
+        private SchemaConfig sourceConfig;
+        private SchemaConfig targetConfig;
 
-    public boolean isReplicateDml() {
-        return replicateDml;
-    }
+        private ReplicateConfigBuilder() {
+        }
 
-    public void setReplicateDml(boolean replicateDml) {
-        this.replicateDml = replicateDml;
-    }
+        public ReplicateConfigBuilder listener(Listener listener) {
+            this.listener = listener;
+            return this;
+        }
 
-    public boolean isReplicateImported() {
-        return replicateImported;
-    }
+        public ReplicateConfigBuilder sourceConfig(SchemaConfig sourceConfig) {
+            this.sourceConfig = sourceConfig;
+            return this;
+        }
 
-    public void setReplicateImported(boolean replicateImported) {
-        this.replicateImported = replicateImported;
-    }
+        public ReplicateConfigBuilder targetConfig(SchemaConfig targetConfig) {
+            this.targetConfig = targetConfig;
+            return this;
+        }
 
-    public boolean isUpdateExported() {
-        return updateExported;
-    }
-
-    public void setUpdateExported(boolean updateExported) {
-        this.updateExported = updateExported;
+        public ReplicateConfig build() {
+            ReplicateConfig replicateConfig = new ReplicateConfig();
+            replicateConfig.setListener(listener);
+            replicateConfig.setSourceConfig(sourceConfig);
+            replicateConfig.setTargetConfig(targetConfig);
+            return replicateConfig;
+        }
     }
 }

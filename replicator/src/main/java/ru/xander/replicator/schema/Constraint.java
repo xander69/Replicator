@@ -6,6 +6,7 @@ package ru.xander.replicator.schema;
 public abstract class Constraint {
     private Table table;
     private String name;
+    private String columnName;
     private Boolean enabled;
 
     public Table getTable() {
@@ -22,6 +23,14 @@ public abstract class Constraint {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getColumnName() {
+        return columnName;
+    }
+
+    public void setColumnName(String columnName) {
+        this.columnName = columnName;
     }
 
     public Boolean getEnabled() {

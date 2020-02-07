@@ -7,6 +7,7 @@ public enum ColumnType {
     BOOLEAN,
     INTEGER,
     DECIMAL,
+    SERIAL,
     CHAR,
     STRING,
     DATE,

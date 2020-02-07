@@ -345,6 +345,7 @@ public class OracleSchema extends AbstractSchema {
                     CheckConstraint checkConstraint = new CheckConstraint();
                     checkConstraint.setTable(table);
                     checkConstraint.setName(rs.getString("constraint_name"));
+                    checkConstraint.setColumnName(rs.getString("column_name"));
                     checkConstraint.setEnabled("ENABLED".equals(rs.getString("status")));
                     checkConstraint.setCondition(rs.getString("search_condition"));
                     table.addCheckConstraint(checkConstraint);

@@ -5,19 +5,10 @@ package ru.xander.replicator.schema;
  */
 public class ExportedKey extends Constraint {
 
-    private String columnName;
     private String fkTableSchema;
     private String fkTableName;
     private String fkName;
     private String fkColumnName;
-
-    public String getColumnName() {
-        return columnName;
-    }
-
-    public void setColumnName(String columnName) {
-        this.columnName = columnName;
-    }
 
     public String getFkTableSchema() {
         return fkTableSchema;

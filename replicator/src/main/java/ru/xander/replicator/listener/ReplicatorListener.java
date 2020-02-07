@@ -30,7 +30,7 @@ public interface ReplicatorListener {
 
         @Override
         public void alter(Alter event) {
-            System.out.print(LocalDateTime.now() + " - Alter: " + event.getEventType() + " for " + event.getObjectName());
+            System.out.print(LocalDateTime.now() + " - Alter: " + event.getType() + " for " + event.getObjectName());
             if (event.getExtra() != null) {
                 System.out.print(" (" + event.getExtra() + ")");
             }
