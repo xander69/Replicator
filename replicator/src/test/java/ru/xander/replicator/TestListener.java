@@ -19,15 +19,21 @@ public class TestListener implements Listener {
 
     private final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
 
+    private final String name;
+
+    public TestListener(String name) {
+        this.name = name;
+    }
+
     @Override
     public void notify(String message) {
-        printTime();
+        printPrefix();
         System.out.println(message);
     }
 
     @Override
     public void error(Exception e, String sql) {
-        printTime();
+        printPrefix();
         System.out.print(RED);
         System.out.print(e.getMessage());
         if (sql != null) {
@@ -39,7 +45,7 @@ public class TestListener implements Listener {
 
     @Override
     public void alter(Alter event) {
-        printTime();
+        printPrefix();
         System.out.print(BLUE);
         System.out.print(event.getType() + ": " + event.getTableName());
         if (event.getObjectName() != null) {
@@ -49,9 +55,12 @@ public class TestListener implements Listener {
             System.out.print(" (" + event.getExtra() + ")");
         }
         System.out.println(RESET);
+        if (event.getSql() != null) {
+            System.out.println(BRIGHT_BLACK + event.getSql() + RESET);
+        }
     }
 
-    private void printTime() {
-        System.out.print(dateFormat.format(new Date(System.currentTimeMillis())) + " - ");
+    private void printPrefix() {
+        System.out.print(dateFormat.format(new Date(System.currentTimeMillis())) + " <" + name + "> ");
     }
 }

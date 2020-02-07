@@ -9,6 +9,7 @@ public class Alter {
     private String tableName;
     private String objectName;
     private String extra;
+    private String sql;
 
     public AlterType getType() {
         return type;
@@ -40,5 +41,13 @@ public class Alter {
 
     public void setExtra(String extra) {
         this.extra = extra;
+    }
+
+    public String getSql() {
+        return sql;
+    }
+
+    public void setSql(String sql) {
+        this.sql = sql;
     }
 }

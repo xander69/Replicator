@@ -1,16 +1,12 @@
 package ru.xander.replicator;
 
-import ru.xander.replicator.listener.Listener;
-
 /**
  * @author Alexander Shakhov
  */
 public class ReplicateConfig {
 
-    /**
-     * Слушатель событий.
-     */
-    private Listener listener;
+    private static final boolean DEFAULT_UPDATE_IMPORTED = false;
+
     /**
      * Конфигурация схемы-источника.
      */
@@ -19,14 +15,10 @@ public class ReplicateConfig {
      * Конфигурация схемы-приемника.
      */
     private SchemaConfig targetConfig;
-
-    public Listener getListener() {
-        return listener;
-    }
-
-    public void setListener(Listener listener) {
-        this.listener = listener;
-    }
+    /**
+     * Обновлять зависимости.
+     */
+    private boolean updateImported = DEFAULT_UPDATE_IMPORTED;
 
     public SchemaConfig getSourceConfig() {
         return sourceConfig;
@@ -44,21 +36,24 @@ public class ReplicateConfig {
         this.targetConfig = targetConfig;
     }
 
+    public boolean isUpdateImported() {
+        return updateImported;
+    }
+
+    public void setUpdateImported(boolean updateImported) {
+        this.updateImported = updateImported;
+    }
+
     public static ReplicateConfigBuilder builder() {
         return new ReplicateConfigBuilder();
     }
 
     public static class ReplicateConfigBuilder {
-        private Listener listener;
         private SchemaConfig sourceConfig;
         private SchemaConfig targetConfig;
+        private boolean updateImported = DEFAULT_UPDATE_IMPORTED;
 
         private ReplicateConfigBuilder() {
-        }
-
-        public ReplicateConfigBuilder listener(Listener listener) {
-            this.listener = listener;
-            return this;
         }
 
         public ReplicateConfigBuilder sourceConfig(SchemaConfig sourceConfig) {
@@ -71,11 +66,16 @@ public class ReplicateConfig {
             return this;
         }
 
+        public ReplicateConfigBuilder updateImported(boolean updateImported) {
+            this.updateImported = updateImported;
+            return this;
+        }
+
         public ReplicateConfig build() {
             ReplicateConfig replicateConfig = new ReplicateConfig();
-            replicateConfig.setListener(listener);
             replicateConfig.setSourceConfig(sourceConfig);
             replicateConfig.setTargetConfig(targetConfig);
+            replicateConfig.setUpdateImported(updateImported);
             return replicateConfig;
         }
     }

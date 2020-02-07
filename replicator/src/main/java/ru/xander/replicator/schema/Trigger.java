@@ -3,7 +3,6 @@ package ru.xander.replicator.schema;
 /**
  * @author Alexander Shakhov
  */
-@Deprecated
 public class Trigger {
     private Table table;
     private String name;

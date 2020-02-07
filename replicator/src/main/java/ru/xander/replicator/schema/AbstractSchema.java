@@ -79,21 +79,22 @@ public abstract class AbstractSchema implements Schema {
         }
     }
 
-    protected void alter(AlterType type, String tableName) {
-        alter(type, tableName, null);
+    protected void alter(AlterType type, String tableName, String sql) {
+        alter(type, tableName, null, sql);
     }
 
-    protected void alter(AlterType type, String tableName, String objectName) {
-        alter(type, tableName, objectName, null);
+    protected void alter(AlterType type, String tableName, String objectName, String sql) {
+        alter(type, tableName, objectName, null, sql);
     }
 
-    protected void alter(AlterType type, String tableName, String objectName, String extra) {
+    protected void alter(AlterType type, String tableName, String objectName, String extra, String sql) {
         if (listener != null) {
             Alter alter = new Alter();
             alter.setType(type);
             alter.setTableName(tableName);
             alter.setObjectName(objectName);
             alter.setExtra(extra);
+            alter.setSql(sql);
             listener.alter(alter);
         }
     }

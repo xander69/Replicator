@@ -13,12 +13,11 @@ public class ReplicatorTest {
 
     @Test
     public void replicate() {
-        ReplicateConfig replicateConfig = ReplicateConfig.builder()
+        new Replicator().replicate("D_EB_KD", ReplicateConfig.builder()
                 .sourceConfig(TestUtils.sourceSchemaOracle())
                 .targetConfig(TestUtils.targetSchemaOracle())
-                .listener(new TestListener())
-                .build();
-        new Replicator().replicate("D_EB_KD", replicateConfig);
+                .updateImported(true)
+                .build());
     }
 
     @Test

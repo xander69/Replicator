@@ -1,7 +1,6 @@
 package ru.xander.replicator;
 
 import ru.xander.replicator.schema.BatchExecutor;
-import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.Constraint;
 import ru.xander.replicator.schema.Ddl;
@@ -42,8 +41,6 @@ public interface Schema {
     void dropPrimaryKey(PrimaryKey primaryKey);
 
     void createImportedKey(ImportedKey importedKey);
-
-    void createCheckConstraint(CheckConstraint checkConstraint);
 
     void dropConstraint(Constraint constraint);
 

@@ -1,5 +1,7 @@
 package ru.xander.replicator;
 
+import ru.xander.replicator.listener.Listener;
+
 /**
  * @author Alexander Shakhov
  */
@@ -10,6 +12,7 @@ public class SchemaConfig {
     private String username;
     private String password;
     private String workSchema;
+    private Listener listener;
 
     public String getJdbcDriver() {
         return jdbcDriver;
@@ -51,6 +54,14 @@ public class SchemaConfig {
         this.workSchema = workSchema;
     }
 
+    public Listener getListener() {
+        return listener;
+    }
+
+    public void setListener(Listener listener) {
+        this.listener = listener;
+    }
+
     public static SchemaConfigBuilder builder() {
         return new SchemaConfigBuilder();
     }
@@ -62,6 +73,7 @@ public class SchemaConfig {
         private String username;
         private String password;
         private String workSchema;
+        private Listener listener;
 
         private SchemaConfigBuilder() {
         }
@@ -91,6 +103,11 @@ public class SchemaConfig {
             return this;
         }
 
+        public SchemaConfigBuilder listener(Listener listener) {
+            this.listener = listener;
+            return this;
+        }
+
         public SchemaConfig build() {
             SchemaConfig schemaConfig = new SchemaConfig();
             schemaConfig.setJdbcDriver(jdbcDriver);
@@ -98,6 +115,7 @@ public class SchemaConfig {
             schemaConfig.setUsername(username);
             schemaConfig.setPassword(password);
             schemaConfig.setWorkSchema(workSchema);
+            schemaConfig.setListener(listener);
             return schemaConfig;
         }
     }

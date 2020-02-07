@@ -1,7 +1,6 @@
 package ru.xander.replicator.schema.oracle;
 
 import ru.xander.replicator.exception.SchemaException;
-import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnType;
 import ru.xander.replicator.schema.Constraint;
@@ -235,10 +234,9 @@ class OracleDialect {
         if (ModifyType.DEFAULT.anyOf(modifyTypes)) {
             modify.append("DEFAULT ").append(column.getDefaultValue());
         }
-        // в Oralce NOT NULL реализован в виде check-констрейнта
-//        if (ModifyType.MANDATORY.anyOf(modifyTypes)) {
-//            modify.append(column.isNullable() ? "NULL " : "NOT NULL");
-//        }
+        if (ModifyType.MANDATORY.anyOf(modifyTypes)) {
+            modify.append(column.isNullable() ? "NULL " : "NOT NULL ");
+        }
         if (modify.length() == 0) {
             return null;
         }
@@ -275,11 +273,11 @@ class OracleDialect {
                 + " (" + importedKey.getPkColumnName() + ')';
     }
 
-    String createCheckConstraintQuery(CheckConstraint checkConstraint) {
-        return "ALTER TABLE " + getQualifiedName(checkConstraint.getTable())
-                + " ADD CONSTRAINT " + checkConstraint.getName()
-                + " CHECK (" + checkConstraint.getCondition() + ')';
-    }
+//    String createCheckConstraintQuery(CheckConstraint checkConstraint) {
+//        return "ALTER TABLE " + getQualifiedName(checkConstraint.getTable())
+//                + " ADD CONSTRAINT " + checkConstraint.getName()
+//                + " CHECK (" + checkConstraint.getCondition() + ')';
+//    }
 
     String dropConstraintQuery(Constraint constraint) {
         return "ALTER TABLE " + getQualifiedName(constraint.getTable()) + " DROP CONSTRAINT " + constraint.getName();
@@ -412,10 +410,9 @@ class OracleDialect {
         if (column.getDefaultValue() != null) {
             definition.append(" DEFAULT ").append(column.getDefaultValue().trim());
         }
-        // в Oralce NOT NULL реализован в виде check-констрейнта
-//        if (!column.isNullable()) {
-//            definition.append(" NOT NULL");
-//        }
+        if (!column.isNullable()) {
+            definition.append(" NOT NULL");
+        }
         return definition.toString();
     }
 

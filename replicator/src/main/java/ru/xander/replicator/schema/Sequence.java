@@ -3,7 +3,6 @@ package ru.xander.replicator.schema;
 /**
  * @author Alexander Shakhov
  */
-@Deprecated
 public class Sequence {
 
     private Table table;

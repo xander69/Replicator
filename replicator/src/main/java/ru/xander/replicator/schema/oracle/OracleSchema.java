@@ -4,7 +4,6 @@ import ru.xander.replicator.exception.SchemaException;
 import ru.xander.replicator.listener.AlterType;
 import ru.xander.replicator.listener.Listener;
 import ru.xander.replicator.schema.AbstractSchema;
-import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnType;
 import ru.xander.replicator.schema.Constraint;
@@ -65,141 +64,155 @@ public class OracleSchema extends AbstractSchema {
 
     @Override
     public void createTable(Table table) {
-        alter(CREATE_TABLE, table.getName());
-        execute(dialect.createTableQuery(table));
+        String sql = dialect.createTableQuery(table);
+        alter(CREATE_TABLE, table.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void dropTable(Table table) {
-        alter(DROP_TABLE, table.getName());
-        execute(dialect.dropTableQuery(table));
+        String sql = dialect.dropTableQuery(table);
+        alter(DROP_TABLE, table.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void createTableComment(Table table) {
-        alter(CREATE_TABLE_COMMENT, table.getName());
-        execute(dialect.createTableCommentQuery(table));
+        String sql = dialect.createTableCommentQuery(table);
+        alter(CREATE_TABLE_COMMENT, table.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void createColumn(Column column) {
-        alter(CREATE_COLUMN, column.getTable().getName(), column.getName());
-        execute(dialect.createColumnQuery(column));
+        String sql = dialect.createColumnQuery(column);
+        alter(CREATE_COLUMN, column.getTable().getName(), column.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void modifyColumn(Column oldColumn, Column newColumn) {
         ModifyType[] modifyTypes = compareColumn(oldColumn, newColumn);
         if (modifyTypes.length > 0) {
-            String ddl = dialect.modifyColumnQuery(newColumn, modifyTypes);
-            alter(MODIFY_COLUMN, newColumn.getTable().getName(), newColumn.getName(), Arrays.toString(modifyTypes));
-            execute(ddl);
+            String sql = dialect.modifyColumnQuery(newColumn, modifyTypes);
+            alter(MODIFY_COLUMN, newColumn.getTable().getName(), newColumn.getName(), Arrays.toString(modifyTypes), sql);
+            execute(sql);
         }
     }
 
     @Override
     public void dropColumn(Column column) {
-        alter(DROP_COLUMN, column.getTable().getName(), column.getName());
-        execute(dialect.dropColumnQuery(column));
+        String sql = dialect.dropColumnQuery(column);
+        alter(DROP_COLUMN, column.getTable().getName(), column.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void createColumnComment(Column column) {
-        alter(CREATE_COLUMN_COMMENT, column.getTable().getName(), column.getName());
-        execute(dialect.createColumnCommentQuery(column));
+        String sql = dialect.createColumnCommentQuery(column);
+        alter(CREATE_COLUMN_COMMENT, column.getTable().getName(), column.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void createPrimaryKey(PrimaryKey primaryKey) {
-        alter(CREATE_PRIMARY_KEY, primaryKey.getTable().getName(), primaryKey.getName());
-        execute(dialect.createPrimaryKeyQuery(primaryKey));
+        String sql = dialect.createPrimaryKeyQuery(primaryKey);
+        alter(CREATE_PRIMARY_KEY, primaryKey.getTable().getName(), primaryKey.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void dropPrimaryKey(PrimaryKey primaryKey) {
-        alter(DROP_PRIMARY_KEY, primaryKey.getTable().getName(), primaryKey.getName());
-        execute(dialect.dropPrimaryKeyQuery(primaryKey));
+        String sql = dialect.dropPrimaryKeyQuery(primaryKey);
+        alter(DROP_PRIMARY_KEY, primaryKey.getTable().getName(), primaryKey.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void createImportedKey(ImportedKey importedKey) {
-        alter(CREATE_IMPORTED_KEY, importedKey.getTable().getName(), importedKey.getName());
-        execute(dialect.createImportedKeyQuery(importedKey));
-    }
-
-    @Override
-    public void createCheckConstraint(CheckConstraint checkConstraint) {
-        alter(CREATE_CHECK_CONSTRAINT, checkConstraint.getTable().getName(), checkConstraint.getName());
-        execute(dialect.createCheckConstraintQuery(checkConstraint));
+        String sql = dialect.createImportedKeyQuery(importedKey);
+        alter(CREATE_IMPORTED_KEY, importedKey.getTable().getName(), importedKey.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void dropConstraint(Constraint constraint) {
-        alter(DROP_CONSTRAINT, constraint.getTable().getName(), constraint.getName());
-        execute(dialect.dropConstraintQuery(constraint));
+        String sql = dialect.dropConstraintQuery(constraint);
+        alter(DROP_CONSTRAINT, constraint.getTable().getName(), constraint.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void toggleConstraint(Constraint constraint, boolean enabled) {
+        String sql = dialect.toggleConstraintQuery(constraint, enabled);
         AlterType alterType = enabled ? ENABLE_CONSTRAINT : DISABLE_CONSTRAINT;
-        alter(alterType, constraint.getTable().getName(), constraint.getName());
-        execute(dialect.toggleConstraintQuery(constraint, enabled));
+        alter(alterType, constraint.getTable().getName(), constraint.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void createIndex(Index index) {
-        alter(CREATE_INDEX, index.getTable().getName(), index.getName());
-        execute(dialect.createIndexQuery(index));
+        String sql = dialect.createIndexQuery(index);
+        alter(CREATE_INDEX, index.getTable().getName(), index.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void dropIndex(Index index) {
-        alter(DROP_INDEX, index.getTable().getName(), index.getName());
-        execute(dialect.dropIndexQuery(index));
+        String sql = dialect.dropIndexQuery(index);
+        alter(DROP_INDEX, index.getTable().getName(), index.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void toggleIndex(Index index, boolean enabled) {
+        String sql = dialect.toggleIndexQuery(index, enabled);
         AlterType alterType = enabled ? ENABLE_INDEX : DISABLE_INDEX;
-        alter(alterType, index.getTable().getName(), index.getName());
-        execute(dialect.toggleIndexQuery(index, enabled));
+        alter(alterType, index.getTable().getName(), index.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void createTrigger(Trigger trigger) {
-        alter(CREATE_TRIGGER, trigger.getTable().getName(), trigger.getName());
-        execute(dialect.createTriggerQuery(trigger));
+        String sql = dialect.createTriggerQuery(trigger);
+        alter(CREATE_TRIGGER, trigger.getTable().getName(), trigger.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void dropTrigger(Trigger trigger) {
-        alter(DROP_TRIGGER, trigger.getTable().getName(), trigger.getName());
-        execute(dialect.dropTriggerQuery(trigger));
+        String sql = dialect.dropTriggerQuery(trigger);
+        alter(DROP_TRIGGER, trigger.getTable().getName(), trigger.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void toggleTrigger(Trigger trigger, boolean enabled) {
+        String sql = dialect.toggleTriggerQuery(trigger, enabled);
         AlterType alterType = enabled ? ENABLE_TRIGGER : DISABLE_TRIGGER;
-        alter(alterType, trigger.getTable().getName(), trigger.getName());
-        execute(dialect.toggleTriggerQuery(trigger, enabled));
+        alter(alterType, trigger.getTable().getName(), trigger.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void createSequence(Sequence sequence) {
-        alter(CREATE_SEQUENCE, sequence.getTable().getName(), sequence.getName());
-        execute(dialect.createSequenceQuery(sequence));
+        String sql = dialect.createSequenceQuery(sequence);
+        alter(CREATE_SEQUENCE, sequence.getTable().getName(), sequence.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void dropSequence(Sequence sequence) {
-        alter(DROP_SEQUENCE, sequence.getTable().getName(), sequence.getName());
-        execute(dialect.dropSequenceQuery(sequence));
+        String sql = dialect.dropSequenceQuery(sequence);
+        alter(DROP_SEQUENCE, sequence.getTable().getName(), sequence.getName(), sql);
+        execute(sql);
     }
 
     @Override
     public void analyzeTable(Table table) {
-        alter(ANALYZE_TABLE, table.getName());
-        execute(dialect.analyzeTableQuery(table));
+        String sql = dialect.analyzeTableQuery(table);
+        alter(ANALYZE_TABLE, table.getName(), sql);
+        execute(sql);
     }
 
     //TODO: порефачить
@@ -212,7 +225,7 @@ public class OracleSchema extends AbstractSchema {
             ddl.addConstraints(dialect.createPrimaryKeyQuery(table.getPrimaryKey()));
         }
         table.getImportedKeys().forEach(importedKey -> ddl.addConstraints(dialect.createImportedKeyQuery(importedKey)));
-        table.getCheckConstraints().forEach(checkConstraint -> ddl.addConstraints(dialect.createCheckConstraintQuery(checkConstraint)));
+//        table.getCheckConstraints().forEach(checkConstraint -> ddl.addConstraints(dialect.createCheckConstraintQuery(checkConstraint)));
         table.getIndices().forEach(index -> ddl.addIndex(dialect.createIndexQuery(index)));
         table.getTriggers().forEach(trigger -> ddl.addTrigger(dialect.createTriggerQuery(trigger)));
         if (table.getSequence() != null) {
@@ -276,7 +289,7 @@ public class OracleSchema extends AbstractSchema {
             column.setNumber(rs.getInt("column_id"));
             column.setName(rs.getString("column_name"));
             column.setColumnType(columnType);
-            column.setNullable("N".equalsIgnoreCase(rs.getString("nullable")));
+            column.setNullable("Y".equalsIgnoreCase(rs.getString("nullable")));
             column.setDefaultValue(rs.getString("data_default"));
             column.setComment(rs.getString("comments"));
 
@@ -340,15 +353,6 @@ public class OracleSchema extends AbstractSchema {
                     exportedKey.setFkName(rs.getString("constraint_name"));
                     exportedKey.setFkColumnName(rs.getString("column_name"));
                     table.addExportedKey(exportedKey);
-                    break;
-                case "C":
-                    CheckConstraint checkConstraint = new CheckConstraint();
-                    checkConstraint.setTable(table);
-                    checkConstraint.setName(rs.getString("constraint_name"));
-                    checkConstraint.setColumnName(rs.getString("column_name"));
-                    checkConstraint.setEnabled("ENABLED".equals(rs.getString("status")));
-                    checkConstraint.setCondition(rs.getString("search_condition"));
-                    table.addCheckConstraint(checkConstraint);
                     break;
             }
         });
@@ -414,10 +418,9 @@ public class OracleSchema extends AbstractSchema {
         if (!StringUtils.equalsStringIgnoreWhiteSpace(oldColumn.getDefaultValue(), newColumn.getDefaultValue())) {
             modifyTypes.add(ModifyType.DEFAULT);
         }
-        // в Oralce NOT NULL реализован в виде check-констрейнта
-//        if (newColumn.isNullable() != oldColumn.isNullable()) {
-//            modifyTypes.add(ModifyType.MANDATORY);
-//        }
+        if (newColumn.isNullable() != oldColumn.isNullable()) {
+            modifyTypes.add(ModifyType.MANDATORY);
+        }
         return modifyTypes.toArray(new ModifyType[0]);
     }
 }

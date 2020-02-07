@@ -8,6 +8,7 @@ import java.util.Map;
 /**
  * @author Alexander Shakhov
  */
+//TODO: реализовать поддержку партиций
 public class Table {
 
     private String schema;
@@ -17,13 +18,9 @@ public class Table {
     private PrimaryKey primaryKey;
     private Map<String, ImportedKey> importedKeyMap;
     private Map<String, ExportedKey> exportedKeyMap;
-    private Map<String, CheckConstraint> checkConstraintMap;
     private Map<String, Index> indexMap;
-    @Deprecated
     private Map<String, Trigger> triggerMap;
-    @Deprecated
     private Sequence sequence;
-    //TODO: реализовать поддержку партиций
     private VendorType vendorType;
 
     public Table() {
@@ -96,7 +93,6 @@ public class Table {
         }
         importedKeyMap.entrySet().removeIf(e -> e.getValue().getColumnName().equals(column.getName()));
         exportedKeyMap.entrySet().removeIf(e -> e.getValue().getColumnName().equals(column.getName()));
-        checkConstraintMap.entrySet().removeIf(e -> e.getValue().getColumnName().equals(column.getName()));
         indexMap.entrySet().removeIf(e -> e.getValue().getColumns().contains(column.getName()));
     }
 
@@ -178,41 +174,6 @@ public class Table {
         exportedKeyMap.remove(exportedKey.getName());
     }
 
-    public Map<String, CheckConstraint> getCheckConstraintMap() {
-        if (checkConstraintMap == null) {
-            return Collections.emptyMap();
-        }
-        return checkConstraintMap;
-    }
-
-    public Collection<CheckConstraint> getCheckConstraints() {
-        if (checkConstraintMap == null) {
-            return Collections.emptyList();
-        }
-        return checkConstraintMap.values();
-    }
-
-    public CheckConstraint getCheckConstraint(String keyName) {
-        if (checkConstraintMap == null) {
-            return null;
-        }
-        return checkConstraintMap.get(keyName);
-    }
-
-    public void addCheckConstraint(CheckConstraint checkConstraint) {
-        if (checkConstraintMap == null) {
-            checkConstraintMap = new LinkedHashMap<>();
-        }
-        checkConstraintMap.put(checkConstraint.getName(), checkConstraint);
-    }
-
-    public void removeCheckConstraint(CheckConstraint checkConstraint) {
-        if (checkConstraintMap == null) {
-            return;
-        }
-        checkConstraintMap.remove(checkConstraint.getName());
-    }
-
     public Map<String, Index> getIndexMap() {
         if (indexMap == null) {
             return Collections.emptyMap();
@@ -274,6 +235,13 @@ public class Table {
             triggerMap = new LinkedHashMap<>();
         }
         triggerMap.put(trigger.getName(), trigger);
+    }
+
+    public void removeTrigger(Trigger targetTrigger) {
+        if (triggerMap == null) {
+            return;
+        }
+        triggerMap.remove(targetTrigger.getName());
     }
 
     public Sequence getSequence() {

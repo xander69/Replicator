@@ -6,7 +6,6 @@ import ru.xander.replicator.compare.CompareResult;
 import ru.xander.replicator.compare.CompareResultType;
 import ru.xander.replicator.exception.ReplicatorException;
 import ru.xander.replicator.schema.BatchExecutor;
-import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.Ddl;
 import ru.xander.replicator.schema.Dml;
@@ -43,11 +42,11 @@ public class Replicator {
      */
     public void replicate(String tableName, ReplicateConfig config) {
         try (
-                SchemaConnection source = new SchemaConnection(config.getSourceConfig(), config.getListener());
-                SchemaConnection target = new SchemaConnection(config.getTargetConfig(), config.getListener())
+                SchemaConnection source = new SchemaConnection(config.getSourceConfig());
+                SchemaConnection target = new SchemaConnection(config.getTargetConfig())
         ) {
             Set<String> createdTables = new HashSet<>();
-            replicateTable(tableName, source.getSchema(), target.getSchema(), createdTables);
+            replicateTable(tableName, source.getSchema(), target.getSchema(), createdTables, config.isUpdateImported());
         }
     }
 
@@ -72,10 +71,14 @@ public class Replicator {
 //        pumpScript(scriptFile);
     }
 
-    private void replicateTable(String tableName, Schema source, Schema target, Set<String> createdTables) {
+    private void replicateTable(String tableName, Schema source, Schema target, Set<String> createdTables, boolean updateImported) {
         if (createdTables.contains(tableName)) {
             return;
         }
+
+        // обновляем, если это запрашиваемая таблица (createdTables пустой)
+        // либо если это требуется параметрами
+        boolean update = createdTables.isEmpty() || updateImported;
 
         createdTables.add(tableName);
 
@@ -86,13 +89,13 @@ public class Replicator {
 
         sourceTable.getImportedKeys().forEach(importedKey -> {
             String pkTableName = importedKey.getPkTableName();
-            replicateTable(pkTableName, source, target, createdTables);
+            replicateTable(pkTableName, source, target, createdTables, updateImported);
         });
 
         Table targetTable = target.getTable(tableName);
         if (targetTable == null) {
             createTable(target, sourceTable);
-        } else {
+        } else if (update) {
             updateTable(target, targetTable, sourceTable);
         }
     }
@@ -108,17 +111,15 @@ public class Replicator {
             target.createPrimaryKey(primaryKey);
         }
         table.getImportedKeys().forEach(target::createImportedKey);
-        table.getCheckConstraints().forEach(target::createCheckConstraint);
         table.getIndices().forEach(target::createIndex);
-        // TODO: триггеры и сиквенсы спрятать в схему. ввести тип данных Serial
         // Триггеры создаем только на идентичных схемах
-//        if (source.getVendorType() == target.getVendorType()) {
-//            table.getTriggers().forEach(target::createTrigger);
-//        }
-//        Sequence sequence = table.getSequence();
-//        if (sequence != null) {
-//            target.createSequence(sequence);
-//        }
+        if (table.getVendorType() == target.getVendorType()) {
+            table.getTriggers().forEach(target::createTrigger);
+        }
+        Sequence sequence = table.getSequence();
+        if (sequence != null) {
+            target.createSequence(sequence);
+        }
         target.analyzeTable(table);
     }
 
@@ -126,9 +127,10 @@ public class Replicator {
         updateColumns(target, targetTable, sourceTable);
         updatePrimaryKey(target, targetTable, sourceTable);
         updateImportedKeys(target, targetTable, sourceTable);
-        updateCheckConstraints(target, targetTable, sourceTable);
         updateIndices(target, targetTable, sourceTable);
         updateComments(target, targetTable, sourceTable);
+        updateSequence(target, targetTable, sourceTable);
+        updateTriggers(target, targetTable, sourceTable);
     }
 
     private void updateColumns(Schema target, Table targetTable, Table sourceTable) {
@@ -197,25 +199,6 @@ public class Replicator {
         });
     }
 
-    private void updateCheckConstraints(Schema target, Table targetTable, Table sourceTable) {
-        Map<String, CheckConstraint> sourceCheckConstraints = sourceTable.getCheckConstraintMap();
-        Map<String, CheckConstraint> targetCheckConstraints = targetTable.getCheckConstraintMap();
-
-        List<CheckConstraint> checkConstraintsToDrop = targetCheckConstraints.values().stream()
-                .filter(checkConstraint -> !sourceCheckConstraints.containsKey(checkConstraint.getName()))
-                .collect(Collectors.toList());
-
-        checkConstraintsToDrop.forEach(target::dropConstraint);
-        checkConstraintsToDrop.forEach(targetTable::removeCheckConstraint);
-
-        sourceCheckConstraints.forEach((constraintName, sourceCheckConstraint) -> {
-            if (!targetCheckConstraints.containsKey(constraintName)) {
-                target.createCheckConstraint(sourceCheckConstraint);
-                targetTable.addCheckConstraint(sourceCheckConstraint);
-            }
-        });
-    }
-
     private void updateIndices(Schema target, Table targetTable, Table sourceTable) {
         Map<String, Index> sourceIndexes = sourceTable.getIndexMap();
         Map<String, Index> targetIndexes = targetTable.getIndexMap();
@@ -235,54 +218,52 @@ public class Replicator {
         });
     }
 
-//    private void updateTriggers(Table targetTable, Table sourceTable) {
-//        Map<String, Trigger> sourceTriggers = sourceTable.getTriggerMap();
-//        Map<String, Trigger> targetTriggers = targetTable.getTriggerMap();
-//        targetTriggers.forEach((triggerName, targetTrigger) -> {
-//            if (!sourceTriggers.containsKey(triggerName)) {
-//                listener.alter(new Alter(DROP_TRIGGER, triggerName));
-//                target.dropTrigger(targetTrigger);
-//            }
-//        });
-//        sourceTriggers.forEach((triggerName, sourceTrigger) -> {
-//            Trigger targetTrigger = targetTriggers.get(triggerName);
-//            if (targetTrigger == null) {
-//                listener.alter(new Alter(CREATE_TRIGGER, triggerName));
-//                target.createTrigger(sourceTrigger);
-//            } else if (!StringUtils.equalsStringIgnoreWhiteSpace(sourceTrigger.getBody(), targetTrigger.getBody())) {
-//                listener.alter(new Alter(CREATE_TRIGGER, triggerName));
-//                target.createTrigger(sourceTrigger);
-//            }
-//        });
-//    }
-//
-//    private void updateSequence(Table targetTable, Table sourceTable) {
-//        Sequence sourceSequence = sourceTable.getSequence();
-//        Sequence targetSequence = targetTable.getSequence();
-//        if ((targetSequence == null) && (sourceSequence == null)) {
-//            return;
-//        }
-//        if (sourceSequence == null) {
-//            listener.alter(new Alter(DROP_SEQUENCE, targetSequence.getName()));
-//            target.dropSequence(targetSequence);
-//            return;
-//        }
-//        if (targetTable.getSequence() == null) {
-//            listener.alter(new Alter(CREATE_SEQUENCE, sourceSequence.getName()));
-//            target.createSequence(sourceSequence);
-//            return;
-//        }
-//        if (Objects.equals(sourceSequence.getName(), targetSequence.getName())) {
-//            return;
-//        }
-//
-//        // Сюда по идее попадаем, когда сиквенс у таблицы есть, но назван по-другому
-//        // Нужно пересоздать его с новым именем
-//        listener.alter(new Alter(DROP_SEQUENCE, targetSequence.getName()));
-//        target.dropSequence(targetSequence);
-//        listener.alter(new Alter(CREATE_SEQUENCE, sourceSequence.getName()));
-//        target.createSequence(sourceSequence);
-//    }
+    private void updateSequence(Schema target, Table targetTable, Table sourceTable) {
+        Sequence sourceSequence = sourceTable.getSequence();
+        Sequence targetSequence = targetTable.getSequence();
+        if ((targetSequence == null) && (sourceSequence == null)) {
+            return;
+        }
+        if (sourceSequence == null) {
+            target.dropSequence(targetSequence);
+            targetTable.setSequence(null);
+            return;
+        }
+        if (targetTable.getSequence() == null) {
+            target.createSequence(sourceSequence);
+            targetTable.setSequence(sourceSequence);
+            return;
+        }
+        if (Objects.equals(sourceSequence.getName(), targetSequence.getName())) {
+            return;
+        }
+
+        // Сюда по идее попадаем, когда сиквенс у таблицы есть, но назван по-другому
+        // Нужно пересоздать его с новым именем
+        target.dropSequence(targetSequence);
+        target.createSequence(sourceSequence);
+        targetTable.setSequence(sourceSequence);
+    }
+
+    private void updateTriggers(Schema target, Table targetTable, Table sourceTable) {
+        Map<String, Trigger> sourceTriggers = sourceTable.getTriggerMap();
+        Map<String, Trigger> targetTriggers = targetTable.getTriggerMap();
+        targetTriggers.forEach((triggerName, targetTrigger) -> {
+            if (!sourceTriggers.containsKey(triggerName)) {
+                target.dropTrigger(targetTrigger);
+                targetTable.removeTrigger(targetTrigger);
+            }
+        });
+        sourceTriggers.forEach((triggerName, sourceTrigger) -> {
+            Trigger targetTrigger = targetTriggers.get(triggerName);
+            if (targetTrigger == null) {
+                target.createTrigger(sourceTrigger);
+            } else if (!StringUtils.equalsStringIgnoreWhiteSpace(sourceTrigger.getBody(), targetTrigger.getBody())) {
+                target.createTrigger(sourceTrigger);
+            }
+            targetTable.addTrigger(sourceTrigger);
+        });
+    }
 
     private void updateComments(Schema target, Table targetTable, Table sourceTable) {
         if (!StringUtils.equalsStringIgnoreWhiteSpace(targetTable.getComment(), sourceTable.getComment())) {
@@ -326,10 +307,10 @@ public class Replicator {
 //            listener.alter(new Alter(DROP_CONSTRAINT, importedKey.getName()));
             target.dropConstraint(importedKey);
         });
-        table.getCheckConstraints().forEach(checkConstraint -> {
+//        table.getCheckConstraints().forEach(checkConstraint -> {
 //            listener.alter(new Alter(DROP_CONSTRAINT, checkConstraint.getName()));
-            target.dropConstraint(checkConstraint);
-        });
+//            target.dropConstraint(checkConstraint);
+//        });
         table.getIndices().forEach(index -> {
 //            listener.alter(new Alter(DROP_INDEX, index.getName()));
             target.dropIndex(index);
@@ -371,7 +352,7 @@ public class Replicator {
         compareColumns(sourceTable, targetTable, diffs);
         comparePrimaryKey(sourceTable, targetTable, diffs);
         compareImportedKeys(sourceTable, targetTable, diffs);
-        compareCheckConstraints(sourceTable, targetTable, diffs);
+//        compareCheckConstraints(sourceTable, targetTable, diffs);
         compareIndexes(sourceTable, targetTable, diffs);
         compareTriggers(sourceTable, targetTable, diffs);
         compareSequence(sourceTable, targetTable, diffs);
@@ -491,27 +472,27 @@ public class Replicator {
         });
     }
 
-    private void compareCheckConstraints(Table sourceTable, Table targetTable, List<CompareDiff> diffs) {
-        Map<String, CheckConstraint> sourceCheckConstraints = sourceTable.getCheckConstraintMap();
-        Map<String, CheckConstraint> targetCheckConstraints = targetTable.getCheckConstraintMap();
-        sourceCheckConstraints.forEach((checkConstraintName, sourceCheckConstraint) -> {
-            CheckConstraint targetCheckConstraint = targetCheckConstraints.get(checkConstraintName);
-            if (targetCheckConstraint == null) {
-                diffs.add(new CompareDiff(CompareKind.CHECK_CONSTRAINT_ABSENT_ON_TARGET, checkConstraintName, null));
-            } else {
-                if (!Objects.equals(sourceCheckConstraint.getCondition(), targetCheckConstraint.getCondition())) {
-                    diffs.add(new CompareDiff(CompareKind.CHECK_CONSTRAINT_CONDITION,
-                            sourceCheckConstraint.getCondition(),
-                            targetCheckConstraint.getCondition()));
-                }
-            }
-        });
-        targetCheckConstraints.forEach((checkConstraintName, targetCheckConstraint) -> {
-            if (!sourceCheckConstraints.containsKey(checkConstraintName)) {
-                diffs.add(new CompareDiff(CompareKind.CHECK_CONSTRAINT_ABSENT_ON_SOURCE, null, checkConstraintName));
-            }
-        });
-    }
+//    private void compareCheckConstraints(Table sourceTable, Table targetTable, List<CompareDiff> diffs) {
+//        Map<String, CheckConstraint> sourceCheckConstraints = sourceTable.getCheckConstraintMap();
+//        Map<String, CheckConstraint> targetCheckConstraints = targetTable.getCheckConstraintMap();
+//        sourceCheckConstraints.forEach((checkConstraintName, sourceCheckConstraint) -> {
+//            CheckConstraint targetCheckConstraint = targetCheckConstraints.get(checkConstraintName);
+//            if (targetCheckConstraint == null) {
+//                diffs.add(new CompareDiff(CompareKind.CHECK_CONSTRAINT_ABSENT_ON_TARGET, checkConstraintName, null));
+//            } else {
+//                if (!Objects.equals(sourceCheckConstraint.getCondition(), targetCheckConstraint.getCondition())) {
+//                    diffs.add(new CompareDiff(CompareKind.CHECK_CONSTRAINT_CONDITION,
+//                            sourceCheckConstraint.getCondition(),
+//                            targetCheckConstraint.getCondition()));
+//                }
+//            }
+//        });
+//        targetCheckConstraints.forEach((checkConstraintName, targetCheckConstraint) -> {
+//            if (!sourceCheckConstraints.containsKey(checkConstraintName)) {
+//                diffs.add(new CompareDiff(CompareKind.CHECK_CONSTRAINT_ABSENT_ON_SOURCE, null, checkConstraintName));
+//            }
+//        });
+//    }
 
     private void compareIndexes(Table sourceTable, Table targetTable, List<CompareDiff> diffs) {
         Map<String, Index> sourceIndexes = sourceTable.getIndexMap();
