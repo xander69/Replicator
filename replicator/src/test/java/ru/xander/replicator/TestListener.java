@@ -12,6 +12,7 @@ import java.util.Date;
  */
 public class TestListener implements Listener {
 
+    private static final String WHITE_AND_RED_BG = "\u001B[97;41m";
     private static final String RED = "\u001B[31m";
     private static final String RESET = "\u001B[0m";
     private static final String BLUE = "\u001B[34m";
@@ -32,12 +33,22 @@ public class TestListener implements Listener {
     }
 
     @Override
-    public void error(Exception e, String sql) {
+    public void warning(String message) {
         printPrefix();
         System.out.print(RED);
-        System.out.print(e.getMessage());
+        System.out.print("Warning: " + message);
+        System.out.println(RESET);
+    }
+
+    @Override
+    public void error(Exception e, String sql) {
+        printPrefix();
+        System.out.print(WHITE_AND_RED_BG);
+        System.out.print("Error: " + e.getMessage());
         if (sql != null) {
+            System.out.print(RESET);
             System.out.println();
+            System.out.print(RED);
             System.out.print(sql);
         }
         System.out.println(RESET);

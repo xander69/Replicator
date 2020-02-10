@@ -23,6 +23,7 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -34,7 +35,13 @@ class OracleDialect {
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     private static final SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyy-MM.dd HH:mm:ss.SSS");
 
-    String selectTableQuery(String workSchema, String tableName) {
+    private final String workSchema;
+
+    OracleDialect(String workSchema) {
+        this.workSchema = workSchema;
+    }
+
+    String selectTableQuery(String tableName) {
         return "SELECT\n" +
                 "  T.OWNER,\n" +
                 "  T.TABLE_NAME,\n" +
@@ -68,7 +75,7 @@ class OracleDialect {
                 "    AND C.TABLE_NAME = CC.TABLE_NAME\n" +
                 "    AND C.COLUMN_NAME = CC.COLUMN_NAME\n" +
                 "WHERE\n" +
-                "  C.OWNER = '" + table.getSchema() + "'\n" +
+                "  C.OWNER = '" + workSchema + "'\n" +
                 "  AND C.TABLE_NAME = '" + table.getName() + "'\n" +
                 "ORDER BY C.COLUMN_ID";
     }
@@ -99,7 +106,7 @@ class OracleDialect {
                 "    AND CR.TABLE_NAME = CCR.TABLE_NAME\n" +
                 "    AND CR.CONSTRAINT_NAME = CCR.CONSTRAINT_NAME\n" +
                 "WHERE C.CONSTRAINT_TYPE IN ('P', 'R', 'C')\n" +
-                "      AND C.OWNER = '" + table.getSchema() + "'\n" +
+                "      AND C.OWNER = '" + workSchema + "'\n" +
                 "      AND C.TABLE_NAME = '" + table.getName() + "'\n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
@@ -126,7 +133,7 @@ class OracleDialect {
                 "    CR.OWNER = CCR.OWNER\n" +
                 "    AND CR.TABLE_NAME = CCR.TABLE_NAME\n" +
                 "    AND CR.CONSTRAINT_NAME = CCR.CONSTRAINT_NAME\n" +
-                "WHERE CR.OWNER = '" + table.getSchema() + "'\n" +
+                "WHERE CR.OWNER = '" + workSchema + "'\n" +
                 "      AND CR.TABLE_NAME = '" + table.getName() + '\'';
     }
 
@@ -145,17 +152,17 @@ class OracleDialect {
                 "    I.OWNER = IC.INDEX_OWNER\n" +
                 "    AND I.INDEX_NAME = IC.INDEX_NAME\n" +
                 "WHERE\n" +
-                "  I.TABLE_OWNER = '" + table.getSchema() + "'\n" +
+                "  I.TABLE_OWNER = '" + workSchema + "'\n" +
                 "  AND I.TABLE_NAME = '" + table.getName() + "'\n" +
-                "  AND (I.OWNER, I.INDEX_NAME) NOT IN\n" +
+                "  AND (/*I.OWNER, */I.INDEX_NAME) NOT IN\n" +
                 "      (\n" +
                 "        SELECT DISTINCT\n" +
-                "          C.INDEX_OWNER,\n" +
+                "          /*C.INDEX_OWNER,*/\n" +
                 "          C.INDEX_NAME\n" +
                 "        FROM SYS.ALL_CONSTRAINTS C\n" +
-                "        WHERE C.OWNER = '" + table.getSchema() + "'\n" +
+                "        WHERE C.OWNER = '" + workSchema + "'\n" +
                 "              AND C.TABLE_NAME = '" + table.getName() + "'\n" +
-                "              AND C.INDEX_OWNER IS NOT NULL\n" +
+                "              /*AND C.INDEX_OWNER IS NOT NULL\n*/" +
                 "              AND C.INDEX_NAME IS NOT NULL\n" +
                 "      )\n" +
                 "GROUP BY\n" +
@@ -177,8 +184,22 @@ class OracleDialect {
                 "  T.TRIGGER_BODY,\n" +
                 "  T.STATUS\n" +
                 "FROM SYS.ALL_TRIGGERS T\n" +
-                "WHERE T.TABLE_OWNER = '" + table.getSchema() + "'\n" +
+                "WHERE T.TABLE_OWNER = '" + workSchema + "'\n" +
                 "      AND T.TABLE_NAME = '" + table.getName() + "'";
+    }
+
+    String selectTriggerDependenciesQuery(Trigger trigger) {
+        return "SELECT D.REFERENCED_OWNER,\n" +
+                "       D.REFERENCED_NAME,\n" +
+                "       D.REFERENCED_TYPE\n" +
+                "FROM SYS.ALL_TRIGGERS T\n" +
+                "  INNER JOIN SYS.ALL_DEPENDENCIES D ON\n" +
+                "    T.TABLE_OWNER = '" + workSchema + "'\n" +
+                "    AND T.TABLE_NAME = '" + trigger.getTable().getName() + "'\n" +
+                "    AND T.TRIGGER_NAME = '" + trigger.getName() + "'\n" +
+                "    AND D.OWNER = T.OWNER\n" +
+                "    AND D.NAME = T.TRIGGER_NAME\n" +
+                "    AND D.REFERENCED_TYPE <> 'PACKAGE'";
     }
 
     String selectSequenceQuery(Table table) {
@@ -192,7 +213,7 @@ class OracleDialect {
                 "  S.CACHE_SIZE\n" +
                 "FROM SYS.ALL_TRIGGERS T\n" +
                 "  INNER JOIN SYS.ALL_DEPENDENCIES D ON\n" +
-                "    T.TABLE_OWNER = '" + table.getSchema() + "'\n" +
+                "    T.TABLE_OWNER = '" + workSchema + "'\n" +
                 "    AND T.TABLE_NAME = '" + table.getName() + "'\n" +
                 "    AND D.OWNER = T.OWNER\n" +
                 "    AND D.NAME = T.TRIGGER_NAME\n" +
@@ -204,10 +225,11 @@ class OracleDialect {
 
     String createTableQuery(Table table) {
         return "CREATE TABLE " + getQualifiedName(table) + '\n' +
-                "(\n" +
-                table.getColumns().stream()
-                        .map(OracleDialect::getColumnDefinition)
-                        .collect(Collectors.joining(",\n    ")) +
+                "(\n    " + table
+                .getColumns()
+                .stream()
+                .map(OracleDialect::getColumnDefinition)
+                .collect(Collectors.joining(",\n    ")) +
                 "\n)";
     }
 
@@ -269,7 +291,7 @@ class OracleDialect {
         return "ALTER TABLE " + getQualifiedName(importedKey.getTable())
                 + " ADD CONSTRAINT " + importedKey.getName()
                 + " FOREIGN KEY (" + importedKey.getColumnName() + ")"
-                + " REFERENCES " + importedKey.getPkTableSchema() + '.' + importedKey.getPkTableName()
+                + " REFERENCES " + workSchema + '.' + importedKey.getPkTableName()
                 + " (" + importedKey.getPkColumnName() + ')';
     }
 
@@ -350,7 +372,7 @@ class OracleDialect {
         return "BEGIN\n" +
                 "  SYS.DBMS_STATS.GATHER_TABLE_STATS\n" +
                 "  (\n" +
-                "      OWNNAME => '" + table.getSchema() + "',\n" +
+                "      OWNNAME => '" + workSchema + "',\n" +
                 "      TABNAME => '" + table.getName() + "',\n" +
                 "      ESTIMATE_PERCENT => SYS.DBMS_STATS.AUTO_SAMPLE_SIZE,\n" +
                 "      METHOD_OPT => 'FOR ALL COLUMNS SIZE AUTO'\n" +
@@ -402,6 +424,40 @@ class OracleDialect {
                             return formatValue(value, c);
                         })
                         .collect(Collectors.joining(", ")) + ')';
+    }
+
+    String selectObjectQuery(String objectName, String objectType) {
+        return "SELECT *\n" +
+                "FROM SYS.ALL_OBJECTS\n" +
+                "WHERE OWNER = '" + workSchema + "'\n" +
+                "      AND OBJECT_NAME = '" + objectName + "'\n" +
+                "      AND OBJECT_TYPE = '" + objectType + '\'';
+    }
+
+    String prepareTriggerBody(List<OracleTriggerDependency> dependencies, String description, String body) {
+        String upperedDescr = description.toUpperCase();
+//        String upperedBody = body.toUpperCase();
+        for (OracleTriggerDependency dependency : dependencies) {
+            int descrIndex = upperedDescr.indexOf(dependency.getName());
+            if (descrIndex > 0) {
+                if (upperedDescr.charAt(descrIndex - 1) != '.') {
+                    upperedDescr = upperedDescr.substring(0, descrIndex) + workSchema + '.' + upperedDescr.substring(descrIndex);
+                    description = description.substring(0, descrIndex) + workSchema + '.' + description.substring(descrIndex);
+                }
+            }
+//            int bodyIndex = upperedBody.indexOf(dependency.getName());
+//            if (bodyIndex > 0) {
+//                if (upperedBody.charAt(bodyIndex - 1) != '.') {
+//                    upperedBody = upperedBody.substring(0, bodyIndex) + workSchema + '.' + upperedBody.substring(bodyIndex);
+//                    body = body.substring(0, bodyIndex) + workSchema + '.' + body.substring(bodyIndex);
+//                }
+//            }
+        }
+        if (!upperedDescr.startsWith(workSchema)) {
+            return workSchema + '.' + description + '\n' + body;
+        } else {
+            return description + '\n' + body;
+        }
     }
 
     private static String getColumnDefinition(Column column) {
@@ -485,20 +541,20 @@ class OracleDialect {
         }
     }
 
-    private static String getQualifiedName(Table table) {
-        return table.getSchema() + '.' + table.getName();
+    private String getQualifiedName(Table table) {
+        return workSchema + '.' + table.getName();
     }
 
-    private static String getQualifiedName(Index index) {
-        return index.getTable().getSchema() + '.' + index.getName();
+    private String getQualifiedName(Index index) {
+        return workSchema + '.' + index.getName();
     }
 
-    private static String getQualifiedName(Trigger trigger) {
-        return trigger.getTable().getSchema() + '.' + trigger.getName();
+    private String getQualifiedName(Trigger trigger) {
+        return workSchema + '.' + trigger.getName();
     }
 
-    private static String getQualifiedName(Sequence sequence) {
-        return sequence.getSchema() + '.' + sequence.getName();
+    private String getQualifiedName(Sequence sequence) {
+        return workSchema + '.' + sequence.getName();
     }
 
     private static String quoteString(String string) {

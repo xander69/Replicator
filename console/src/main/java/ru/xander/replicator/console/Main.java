@@ -11,8 +11,7 @@ import org.slf4j.LoggerFactory;
 import ru.xander.replicator.DumpOptions;
 import ru.xander.replicator.Replicator;
 import ru.xander.replicator.Schema;
-import ru.xander.replicator.SchemaFactory;
-import ru.xander.replicator.SchemaOptions;
+import ru.xander.replicator.SchemaConfig;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -82,8 +81,8 @@ public class Main {
     }
 
     private void dump() throws Exception {
-        SchemaOptions sourceSchemaOptions = createSourceSchemaOption();
-        try (Schema sourceSchema = SchemaFactory.create(sourceSchemaOptions)) {
+        SchemaConfig sourceSchemaConfig = createSourceSchemaOption();
+        try (Schema sourceSchema = SchemaFactory.create(sourceSchemaConfig)) {
             Replicator replicator = new Replicator(sourceSchema, sourceSchema, new ConsoleListener(null));
 
             File outPath = new File(System.getProperty("user.dir"), "dumps");
@@ -105,26 +104,26 @@ public class Main {
         }
     }
 
-    private SchemaOptions createSourceSchemaOption() {
-        SchemaOptions schemaOptions = new SchemaOptions();
-        schemaOptions.setJdbcDriver(commandLine.getOptionValue(PARAM_SRC_DRIVER));
-        schemaOptions.setJdbcUrl(commandLine.getOptionValue(PARAM_SRC_URL));
-        schemaOptions.setUsername(commandLine.getOptionValue(PARAM_SRC_USER));
-        schemaOptions.setPassword(commandLine.getOptionValue(PARAM_SRC_PWD));
-        schemaOptions.setWorkSchema(commandLine.getOptionValue(PARAM_SRC_SCHEMA));
-        schemaOptions.setListener(new ConsoleListener("SOURCE"));
-        return schemaOptions;
+    private SchemaConfig createSourceSchemaOption() {
+        SchemaConfig schemaConfig = new SchemaConfig();
+        schemaConfig.setJdbcDriver(commandLine.getOptionValue(PARAM_SRC_DRIVER));
+        schemaConfig.setJdbcUrl(commandLine.getOptionValue(PARAM_SRC_URL));
+        schemaConfig.setUsername(commandLine.getOptionValue(PARAM_SRC_USER));
+        schemaConfig.setPassword(commandLine.getOptionValue(PARAM_SRC_PWD));
+        schemaConfig.setWorkSchema(commandLine.getOptionValue(PARAM_SRC_SCHEMA));
+        schemaConfig.setListener(new ConsoleListener("SOURCE"));
+        return schemaConfig;
     }
 
-    private SchemaOptions createTargetSchemaOption() {
-        SchemaOptions schemaOptions = new SchemaOptions();
-        schemaOptions.setJdbcDriver(commandLine.getOptionValue(PARAM_TRG_DRIVER));
-        schemaOptions.setJdbcUrl(commandLine.getOptionValue(PARAM_TRG_URL));
-        schemaOptions.setUsername(commandLine.getOptionValue(PARAM_TRG_USER));
-        schemaOptions.setPassword(commandLine.getOptionValue(PARAM_TRG_PWD));
-        schemaOptions.setWorkSchema(commandLine.getOptionValue(PARAM_TRG_SCHEMA));
-        schemaOptions.setListener(new ConsoleListener("TARGET"));
-        return schemaOptions;
+    private SchemaConfig createTargetSchemaOption() {
+        SchemaConfig schemaConfig = new SchemaConfig();
+        schemaConfig.setJdbcDriver(commandLine.getOptionValue(PARAM_TRG_DRIVER));
+        schemaConfig.setJdbcUrl(commandLine.getOptionValue(PARAM_TRG_URL));
+        schemaConfig.setUsername(commandLine.getOptionValue(PARAM_TRG_USER));
+        schemaConfig.setPassword(commandLine.getOptionValue(PARAM_TRG_PWD));
+        schemaConfig.setWorkSchema(commandLine.getOptionValue(PARAM_TRG_SCHEMA));
+        schemaConfig.setListener(new ConsoleListener("TARGET"));
+        return schemaConfig;
     }
 
     private void requireArgs(String... args) throws ParseException {

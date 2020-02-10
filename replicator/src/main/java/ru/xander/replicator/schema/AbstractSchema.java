@@ -73,6 +73,12 @@ public abstract class AbstractSchema implements Schema {
         }
     }
 
+    protected void warning(String message) {
+        if (listener != null) {
+            listener.warning(message);
+        }
+    }
+
     protected void error(Exception e, String sql) {
         if (listener != null) {
             listener.error(e, sql);

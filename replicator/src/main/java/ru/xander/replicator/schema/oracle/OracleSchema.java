@@ -21,9 +21,11 @@ import ru.xander.replicator.schema.VendorType;
 import ru.xander.replicator.util.StringUtils;
 
 import java.sql.Connection;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -34,13 +36,13 @@ import static ru.xander.replicator.listener.AlterType.*;
  */
 public class OracleSchema extends AbstractSchema {
 
-    private final String workSchema;
+    //    private final String workSchema;
     private final OracleDialect dialect;
 
     public OracleSchema(Connection connection, Listener listener, String workSchema) {
         super(connection, listener);
-        this.workSchema = workSchema;
-        this.dialect = new OracleDialect();
+//        this.workSchema = workSchema;
+        this.dialect = new OracleDialect(workSchema);
     }
 
     @Override
@@ -110,8 +112,10 @@ public class OracleSchema extends AbstractSchema {
     @Override
     public void createColumnComment(Column column) {
         String sql = dialect.createColumnCommentQuery(column);
-        alter(CREATE_COLUMN_COMMENT, column.getTable().getName(), column.getName(), sql);
-        execute(sql);
+        if (sql != null) {
+            alter(CREATE_COLUMN_COMMENT, column.getTable().getName(), column.getName(), sql);
+            execute(sql);
+        }
     }
 
     @Override
@@ -174,6 +178,10 @@ public class OracleSchema extends AbstractSchema {
 
     @Override
     public void createTrigger(Trigger trigger) {
+        if (isObjectExists(trigger.getName(), "TRIGGER")) {
+            warning("Trigger " + trigger.getName() + " already exists");
+            return;
+        }
         String sql = dialect.createTriggerQuery(trigger);
         alter(CREATE_TRIGGER, trigger.getTable().getName(), trigger.getName(), sql);
         execute(sql);
@@ -196,6 +204,10 @@ public class OracleSchema extends AbstractSchema {
 
     @Override
     public void createSequence(Sequence sequence) {
+        if (isObjectExists(sequence.getName(), "SEQUENCE")) {
+            warning("Sequence " + sequence.getName() + " already exists");
+            return;
+        }
         String sql = dialect.createSequenceQuery(sequence);
         alter(CREATE_SEQUENCE, sequence.getTable().getName(), sequence.getName(), sql);
         execute(sql);
@@ -264,7 +276,7 @@ public class OracleSchema extends AbstractSchema {
 
     private Table findTable(String tableName) {
         notify("Find table " + tableName);
-        return selectOne(dialect.selectTableQuery(workSchema, tableName),
+        return selectOne(dialect.selectTableQuery(tableName),
                 rs -> {
                     Table table = new Table();
                     table.setSchema(rs.getString("owner"));
@@ -374,16 +386,26 @@ public class OracleSchema extends AbstractSchema {
     private void findTriggers(Table table) {
         notify("Find trigger for table " + table.getName());
         select(dialect.selectTriggersQuery(table), rs -> {
-            //TODO: бывает, в description и body не указана схема у объектов
-            // надо как-то обработать этот момент
             String description = rs.getString("description").trim();
             String triggerBody = rs.getString("trigger_body").trim();
+            boolean enabled = "ENABLED".equals(rs.getString("status"));
 
             Trigger trigger = new Trigger();
             trigger.setTable(table);
             trigger.setName(rs.getString("trigger_name"));
-            trigger.setBody("CREATE OR REPLACE TRIGGER " + description + '\n' + triggerBody);
-            trigger.setEnabled("ENABLED".equals(rs.getString("status")));
+
+            List<OracleTriggerDependency> dependencies = new ArrayList<>();
+            select(dialect.selectTriggerDependenciesQuery(trigger), rsDeps -> {
+                OracleTriggerDependency dependency = new OracleTriggerDependency();
+                dependency.setSchema(rsDeps.getString("REFERENCED_OWNER"));
+                dependency.setName(rsDeps.getString("REFERENCED_NAME"));
+                dependency.setType(rsDeps.getString("REFERENCED_TYPE"));
+                dependencies.add(dependency);
+            });
+
+            String body = dialect.prepareTriggerBody(dependencies, description, triggerBody);
+            trigger.setBody("CREATE OR REPLACE TRIGGER " + body);
+            trigger.setEnabled(enabled);
             table.addTrigger(trigger);
         });
     }
@@ -422,5 +444,10 @@ public class OracleSchema extends AbstractSchema {
             modifyTypes.add(ModifyType.MANDATORY);
         }
         return modifyTypes.toArray(new ModifyType[0]);
+    }
+
+    private boolean isObjectExists(String objectName, String objectType) {
+        Boolean exists = selectOne(dialect.selectObjectQuery(objectName, objectType), rs -> true);
+        return (exists != null);
     }
 }
