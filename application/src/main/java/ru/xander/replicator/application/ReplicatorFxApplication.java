@@ -2,9 +2,11 @@ package ru.xander.replicator.application;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import net.rgielen.fxweaver.core.FxControllerAndView;
 import net.rgielen.fxweaver.core.FxWeaver;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -25,10 +27,12 @@ public class ReplicatorFxApplication extends Application {
     @Override
     public void start(Stage primaryStage) {
         FxWeaver fxWeaver = applicationContext.getBean(FxWeaver.class);
-        Parent root = fxWeaver.loadView(MainController.class);
+        FxControllerAndView<MainController, Node> mainControllerAndView = fxWeaver.load(MainController.class);
+        Parent root = (Parent) mainControllerAndView.getView().get();
         Scene scene = new Scene(root);
         primaryStage.setScene(scene);
         primaryStage.show();
+        mainControllerAndView.getController().setScene(scene);
     }
 
     @Override

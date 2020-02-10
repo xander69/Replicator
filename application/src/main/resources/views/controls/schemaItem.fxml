@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.Pane?>
+<Pane prefHeight="26.0" prefWidth="245.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <ImageView fx:id="schemaLogo" fitHeight="24.0" fitWidth="24.0" layoutX="8.0" layoutY="2.0" pickOnBounds="true" preserveRatio="true" />
+      <Label fx:id="schemaName" contentDisplay="CENTER" layoutX="36.0" layoutY="5.0" text="Label" />
+      <Hyperlink fx:id="schemaEdit" alignment="CENTER_RIGHT" contentDisplay="RIGHT" layoutX="168.0" layoutY="1.0" text="Edit" />
+      <Hyperlink fx:id="schemaDelete" layoutX="195.0" layoutY="1.0" text="Delete" />
+   </children>
+</Pane>

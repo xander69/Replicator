@@ -12,7 +12,7 @@
    <top>
       <ToolBar prefHeight="40.0" prefWidth="200.0" BorderPane.alignment="CENTER">
         <items>
-          <Button fx:id="buttonNewSchema" mnemonicParsing="false" text="New Schema" />
+          <Button fx:id="buttonSchemas" mnemonicParsing="false" text="Schemas" />
         </items>
       </ToolBar>
    </top>
@@ -50,6 +50,6 @@
       </Pane>
    </bottom>
    <center>
-      <TextArea fx:id="log" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
+      <TextArea fx:id="logContent" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
    </center>
 </BorderPane>
