@@ -50,9 +50,11 @@ public class Replicator {
         }
     }
 
-    public void drop(String tableName) {
-        //TODO:
-//        dropTable(tableName);
+    public void drop(String tableName, DropConfig config) {
+        try (SchemaConnection schema = new SchemaConnection(config.getSchemaConfig())) {
+            Set<String> droppedTables = new HashSet<>();
+            dropTable(tableName, schema.getSchema(), droppedTables, config);
+        }
     }
 
     public CompareResult compare(String tableName) {
@@ -281,61 +283,41 @@ public class Replicator {
         });
     }
 
-    private void dropTable(Schema target, String tableName) {
-        Table targetTable = target.getTable(tableName);
-        if (targetTable == null) {
-            throw new ReplicatorException("Table " + tableName + " not found on target.");
+    private void dropTable(String tableName, Schema schema, Set<String> droppedTables, DropConfig config) {
+        if (droppedTables.contains(tableName)) {
+            return;
         }
-        dropTable(target, targetTable);
-    }
+        droppedTables.add(tableName);
 
-    private void dropTable(Schema target, Table table) {
-//        if (droppedTables.contains(table.getName())) {
-//            return;
-//        }
-//        droppedTables.add(table.getName());
-//        replicatedTables.remove(table.getName());
-
-        dropExportTables(target, table);
-
-        PrimaryKey primaryKey = table.getPrimaryKey();
-        if (primaryKey != null) {
-//            listener.alter(new Alter(DROP_PRIMARY_KEY, primaryKey.getName()));
-            target.dropPrimaryKey(primaryKey);
-        }
-        table.getImportedKeys().forEach(importedKey -> {
-//            listener.alter(new Alter(DROP_CONSTRAINT, importedKey.getName()));
-            target.dropConstraint(importedKey);
-        });
-//        table.getCheckConstraints().forEach(checkConstraint -> {
-//            listener.alter(new Alter(DROP_CONSTRAINT, checkConstraint.getName()));
-//            target.dropConstraint(checkConstraint);
-//        });
-        table.getIndices().forEach(index -> {
-//            listener.alter(new Alter(DROP_INDEX, index.getName()));
-            target.dropIndex(index);
-        });
-        table.getTriggers().forEach(trigger -> {
-//            listener.alter(new Alter(DROP_TRIGGER, trigger.getName()));
-            target.dropTrigger(trigger);
-        });
-        Sequence sequence = table.getSequence();
-        if (sequence != null) {
-//            listener.alter(new Alter(DROP_SEQUENCE, sequence.getName()));
-            target.dropSequence(sequence);
+        Table table = schema.getTable(tableName);
+        if (table == null) {
+            throw new ReplicatorException("Table " + tableName + " not found");
         }
 
-//        listener.alter(new Alter(DROP_TABLE, table.getName()));
-        target.dropTable(table);
-    }
-
-    private void dropExportTables(Schema target, Table table) {
         table.getExportedKeys().forEach(exportedKey -> {
-            // бывает, таблица ссылается сама на себя. в этом случае не надо её снова удалять
-            if (!Objects.equals(table.getName(), exportedKey.getFkTableName())) {
-                dropTable(target, exportedKey.getFkTableName());
+            if (config.isDropExported()) {
+                dropTable(exportedKey.getFkTableName(), schema, droppedTables, config);
+            } else {
+                schema.dropConstraint(exportedKey);
             }
         });
+
+        dropTable(table, schema);
+    }
+
+    private void dropTable(Table table, Schema schema) {
+        PrimaryKey primaryKey = table.getPrimaryKey();
+        if (primaryKey != null) {
+            schema.dropPrimaryKey(primaryKey);
+        }
+        table.getImportedKeys().forEach(schema::dropConstraint);
+        table.getIndices().forEach(schema::dropIndex);
+        table.getTriggers().forEach(schema::dropTrigger);
+        Sequence sequence = table.getSequence();
+        if (sequence != null) {
+            schema.dropSequence(sequence);
+        }
+        schema.dropTable(table);
     }
 
     private CompareResult compareTable(Schema target, Schema source, String tableName) {

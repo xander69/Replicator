@@ -22,7 +22,9 @@ public class ReplicatorTest {
 
     @Test
     public void drop() {
-//        replicator.drop("SAMPLE_TABLE");
+        new Replicator().drop("D_EB_KD", DropConfig.builder()
+                .schemaConfig(TestUtils.targetSchemaOracle())
+                .build());
     }
 
     @Test
