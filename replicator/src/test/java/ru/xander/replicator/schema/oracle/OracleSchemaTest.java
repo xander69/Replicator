@@ -2,9 +2,9 @@ package ru.xander.replicator.schema.oracle;
 
 import org.junit.Ignore;
 import org.junit.Test;
-import ru.xander.replicator.SchemaConfig;
-import ru.xander.replicator.SchemaConnection;
 import ru.xander.replicator.TestUtils;
+import ru.xander.replicator.schema.SchemaConfig;
+import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.Table;
 
 /**

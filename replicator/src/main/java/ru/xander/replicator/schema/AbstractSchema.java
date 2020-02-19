@@ -1,6 +1,5 @@
 package ru.xander.replicator.schema;
 
-import ru.xander.replicator.Schema;
 import ru.xander.replicator.exception.QueryFailedException;
 import ru.xander.replicator.listener.Alter;
 import ru.xander.replicator.listener.AlterType;

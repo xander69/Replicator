@@ -1,5 +1,7 @@
 package ru.xander.replicator;
 
+import ru.xander.replicator.schema.SchemaConfig;
+
 /**
  * @author Alexander Shakhov
  */

@@ -1,4 +1,4 @@
-package ru.xander.replicator;
+package ru.xander.replicator.schema;
 
 import ru.xander.replicator.listener.Listener;
 

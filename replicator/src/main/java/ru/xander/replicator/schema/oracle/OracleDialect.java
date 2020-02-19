@@ -2,12 +2,13 @@ package ru.xander.replicator.schema.oracle;
 
 import ru.xander.replicator.exception.SchemaException;
 import ru.xander.replicator.schema.Column;
+import ru.xander.replicator.schema.ColumnDiff;
 import ru.xander.replicator.schema.ColumnType;
 import ru.xander.replicator.schema.Constraint;
+import ru.xander.replicator.schema.Dialect;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.IndexType;
-import ru.xander.replicator.schema.ModifyType;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
@@ -30,7 +31,7 @@ import java.util.stream.Collectors;
 /**
  * @author Alexander Shakhov
  */
-class OracleDialect {
+class OracleDialect implements Dialect {
 
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     private static final SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyy-MM.dd HH:mm:ss.SSS");
@@ -223,7 +224,8 @@ class OracleDialect {
                 "    AND S.SEQUENCE_NAME = D.REFERENCED_NAME";
     }
 
-    String createTableQuery(Table table) {
+    @Override
+    public String createTableQuery(Table table) {
         return "CREATE TABLE " + getQualifiedName(table) + '\n' +
                 "(\n    " + table
                 .getColumns()
@@ -233,30 +235,34 @@ class OracleDialect {
                 "\n)";
     }
 
-    String createTableCommentQuery(Table table) {
+    @Override
+    public String createTableCommentQuery(Table table) {
         if (StringUtils.isEmpty(table.getComment())) {
             return null;
         }
         return "COMMENT ON TABLE " + getQualifiedName(table) + " IS '" + table.getComment() + "'";
     }
 
-    String dropTableQuery(Table table) {
+    @Override
+    public String dropTableQuery(Table table) {
         return "DROP TABLE " + getQualifiedName(table) + " PURGE";
     }
 
-    String createColumnQuery(Column column) {
+    @Override
+    public String createColumnQuery(Column column) {
         return "ALTER TABLE " + getQualifiedName(column.getTable()) + " ADD " + getColumnDefinition(column);
     }
 
-    String modifyColumnQuery(Column column, ModifyType... modifyTypes) {
+    @Override
+    public String modifyColumnQuery(Column column, ColumnDiff[] columnDiffs) {
         StringBuilder modify = new StringBuilder();
-        if (ModifyType.DATATYPE.anyOf(modifyTypes)) {
+        if (ColumnDiff.DATATYPE.anyOf(columnDiffs)) {
             modify.append(getDataType(column)).append(' ');
         }
-        if (ModifyType.DEFAULT.anyOf(modifyTypes)) {
+        if (ColumnDiff.DEFAULT.anyOf(columnDiffs)) {
             modify.append("DEFAULT ").append(column.getDefaultValue());
         }
-        if (ModifyType.MANDATORY.anyOf(modifyTypes)) {
+        if (ColumnDiff.MANDATORY.anyOf(columnDiffs)) {
             modify.append(column.isNullable() ? "NULL " : "NOT NULL ");
         }
         if (modify.length() == 0) {
@@ -266,11 +272,13 @@ class OracleDialect {
                 + " MODIFY " + column.getName() + ' ' + modify.toString().trim();
     }
 
-    String dropColumnQuery(Column column) {
+    @Override
+    public String dropColumnQuery(Column column) {
         return "ALTER TABLE " + getQualifiedName(column.getTable()) + " DROP COLUMN " + column.getName();
     }
 
-    String createColumnCommentQuery(Column column) {
+    @Override
+    public String createColumnCommentQuery(Column column) {
         if (StringUtils.isEmpty(column.getComment())) {
             return null;
         }
@@ -278,16 +286,19 @@ class OracleDialect {
                 + '.' + column.getName() + " IS '" + column.getComment() + "'";
     }
 
-    String createPrimaryKeyQuery(PrimaryKey primaryKey) {
+    @Override
+    public String createPrimaryKeyQuery(PrimaryKey primaryKey) {
         return "ALTER TABLE " + getQualifiedName(primaryKey.getTable())
                 + " ADD CONSTRAINT " + primaryKey.getName() + " PRIMARY KEY (" + primaryKey.getColumnName() + ')';
     }
 
-    String dropPrimaryKeyQuery(PrimaryKey primaryKey) {
+    @Override
+    public String dropPrimaryKeyQuery(PrimaryKey primaryKey) {
         return "ALTER TABLE " + getQualifiedName(primaryKey.getTable()) + " DROP PRIMARY KEY";
     }
 
-    String createImportedKeyQuery(ImportedKey importedKey) {
+    @Override
+    public String createImportedKeyQuery(ImportedKey importedKey) {
         return "ALTER TABLE " + getQualifiedName(importedKey.getTable())
                 + " ADD CONSTRAINT " + importedKey.getName()
                 + " FOREIGN KEY (" + importedKey.getColumnName() + ")"
@@ -301,16 +312,19 @@ class OracleDialect {
 //                + " CHECK (" + checkConstraint.getCondition() + ')';
 //    }
 
-    String dropConstraintQuery(Constraint constraint) {
+    @Override
+    public String dropConstraintQuery(Constraint constraint) {
         return "ALTER TABLE " + getQualifiedName(constraint.getTable()) + " DROP CONSTRAINT " + constraint.getName();
     }
 
-    String toggleConstraintQuery(Constraint constraint, boolean enabled) {
+    @Override
+    public String toggleConstraintQuery(Constraint constraint, boolean enabled) {
         return "ALTER TABLE " + getQualifiedName(constraint.getTable()) + ' '
                 + (enabled ? "ENABLE" : "DISABLE") + " CONSTRAINT " + constraint.getName();
     }
 
-    String createIndexQuery(Index index) {
+    @Override
+    public String createIndexQuery(Index index) {
         StringBuilder ddl = new StringBuilder();
         ddl.append("CREATE ");
         if (index.getType() == IndexType.BITMAP) {
@@ -325,11 +339,13 @@ class OracleDialect {
         return ddl.toString();
     }
 
-    String dropIndexQuery(Index index) {
+    @Override
+    public String dropIndexQuery(Index index) {
         return "DROP INDEX " + getQualifiedName(index);
     }
 
-    String toggleIndexQuery(Index index, boolean enabled) {
+    @Override
+    public String toggleIndexQuery(Index index, boolean enabled) {
         if (enabled) {
             return "ALTER INDEX " + getQualifiedName(index) + " REBUILD";
         } else {
@@ -337,19 +353,23 @@ class OracleDialect {
         }
     }
 
-    String createTriggerQuery(Trigger trigger) {
+    @Override
+    public String createTriggerQuery(Trigger trigger) {
         return trigger.getBody();
     }
 
-    String dropTriggerQuery(Trigger trigger) {
+    @Override
+    public String dropTriggerQuery(Trigger trigger) {
         return "DROP TRIGGER " + getQualifiedName(trigger);
     }
 
-    String toggleTriggerQuery(Trigger trigger, boolean enabled) {
+    @Override
+    public String toggleTriggerQuery(Trigger trigger, boolean enabled) {
         return "ALTER TRIGGER " + getQualifiedName(trigger) + ' ' + (enabled ? "ENABLE" : "DISABLE");
     }
 
-    String createSequenceQuery(Sequence sequence) {
+    @Override
+    public String createSequenceQuery(Sequence sequence) {
         StringBuilder sql = new StringBuilder();
         sql.append("CREATE SEQUENCE ").append(getQualifiedName(sequence)).append('\n')
                 .append("MINVALUE ").append(sequence.getMinValue()).append('\n')
@@ -364,11 +384,13 @@ class OracleDialect {
         return sql.toString();
     }
 
-    String dropSequenceQuery(Sequence sequence) {
+    @Override
+    public String dropSequenceQuery(Sequence sequence) {
         return "DROP SEQUENCE " + getQualifiedName(sequence);
     }
 
-    String analyzeTableQuery(Table table) {
+    @Override
+    public String analyzeTableQuery(Table table) {
         return "BEGIN\n" +
                 "  SYS.DBMS_STATS.GATHER_TABLE_STATS\n" +
                 "  (\n" +

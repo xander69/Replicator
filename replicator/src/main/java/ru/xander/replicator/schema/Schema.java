@@ -1,17 +1,4 @@
-package ru.xander.replicator;
-
-import ru.xander.replicator.schema.BatchExecutor;
-import ru.xander.replicator.schema.Column;
-import ru.xander.replicator.schema.Constraint;
-import ru.xander.replicator.schema.Ddl;
-import ru.xander.replicator.schema.Dml;
-import ru.xander.replicator.schema.ImportedKey;
-import ru.xander.replicator.schema.Index;
-import ru.xander.replicator.schema.PrimaryKey;
-import ru.xander.replicator.schema.Sequence;
-import ru.xander.replicator.schema.Table;
-import ru.xander.replicator.schema.Trigger;
-import ru.xander.replicator.schema.VendorType;
+package ru.xander.replicator.schema;
 
 /**
  * @author Alexander Shakhov
@@ -19,6 +6,8 @@ import ru.xander.replicator.schema.VendorType;
 public interface Schema {
 
     VendorType getVendorType();
+
+    Dialect getDialect();
 
     Table getTable(String tableName);
 

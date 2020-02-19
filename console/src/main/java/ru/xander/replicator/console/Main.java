@@ -10,8 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.xander.replicator.DumpOptions;
 import ru.xander.replicator.Replicator;
-import ru.xander.replicator.Schema;
-import ru.xander.replicator.SchemaConfig;
+import ru.xander.replicator.schema.Schema;
+import ru.xander.replicator.schema.SchemaConfig;
 
 import java.io.File;
 import java.io.FileOutputStream;

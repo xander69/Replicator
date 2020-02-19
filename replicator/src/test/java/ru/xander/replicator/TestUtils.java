@@ -1,6 +1,7 @@
 package ru.xander.replicator;
 
 import ru.xander.replicator.schema.PrimaryKey;
+import ru.xander.replicator.schema.SchemaConfig;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 

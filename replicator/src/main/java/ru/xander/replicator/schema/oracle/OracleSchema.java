@@ -5,29 +5,27 @@ import ru.xander.replicator.listener.AlterType;
 import ru.xander.replicator.listener.Listener;
 import ru.xander.replicator.schema.AbstractSchema;
 import ru.xander.replicator.schema.Column;
+import ru.xander.replicator.schema.ColumnDiff;
 import ru.xander.replicator.schema.ColumnType;
 import ru.xander.replicator.schema.Constraint;
 import ru.xander.replicator.schema.Ddl;
+import ru.xander.replicator.schema.Dialect;
 import ru.xander.replicator.schema.Dml;
 import ru.xander.replicator.schema.ExportedKey;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
-import ru.xander.replicator.schema.ModifyType;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.schema.VendorType;
-import ru.xander.replicator.util.StringUtils;
 
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static ru.xander.replicator.listener.AlterType.*;
 
@@ -48,6 +46,11 @@ public class OracleSchema extends AbstractSchema {
     @Override
     public VendorType getVendorType() {
         return VendorType.ORACLE;
+    }
+
+    @Override
+    public Dialect getDialect() {
+        return dialect;
     }
 
     @Override
@@ -94,10 +97,10 @@ public class OracleSchema extends AbstractSchema {
 
     @Override
     public void modifyColumn(Column oldColumn, Column newColumn) {
-        ModifyType[] modifyTypes = compareColumn(oldColumn, newColumn);
-        if (modifyTypes.length > 0) {
-            String sql = dialect.modifyColumnQuery(newColumn, modifyTypes);
-            alter(MODIFY_COLUMN, newColumn.getTable().getName(), newColumn.getName(), Arrays.toString(modifyTypes), sql);
+        ColumnDiff[] columnDiffs = oldColumn.getDiffs(newColumn);
+        if (columnDiffs.length > 0) {
+            String sql = dialect.modifyColumnQuery(newColumn, columnDiffs);
+            alter(MODIFY_COLUMN, newColumn.getTable().getName(), newColumn.getName(), Arrays.toString(columnDiffs), sql);
             execute(sql);
         }
     }
@@ -424,26 +427,6 @@ public class OracleSchema extends AbstractSchema {
             sequence.setCacheSize(rs.getLong("cache_size"));
             return sequence;
         }));
-    }
-
-    private ModifyType[] compareColumn(Column oldColumn, Column newColumn) {
-        Set<ModifyType> modifyTypes = new HashSet<>();
-        if (oldColumn.getColumnType() != newColumn.getColumnType()) {
-            modifyTypes.add(ModifyType.DATATYPE);
-        }
-        if (oldColumn.getSize() != newColumn.getSize()) {
-            modifyTypes.add(ModifyType.DATATYPE);
-        }
-        if (oldColumn.getScale() != newColumn.getScale()) {
-            modifyTypes.add(ModifyType.DATATYPE);
-        }
-        if (!StringUtils.equalsStringIgnoreWhiteSpace(oldColumn.getDefaultValue(), newColumn.getDefaultValue())) {
-            modifyTypes.add(ModifyType.DEFAULT);
-        }
-        if (newColumn.isNullable() != oldColumn.isNullable()) {
-            modifyTypes.add(ModifyType.MANDATORY);
-        }
-        return modifyTypes.toArray(new ModifyType[0]);
     }
 
     private boolean isObjectExists(String objectName, String objectType) {
