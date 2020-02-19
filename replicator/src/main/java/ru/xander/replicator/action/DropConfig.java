@@ -1,4 +1,4 @@
-package ru.xander.replicator;
+package ru.xander.replicator.action;
 
 import ru.xander.replicator.schema.SchemaConfig;
 
@@ -38,27 +38,24 @@ public class DropConfig {
         return new DropConfigBuilder();
     }
 
-    public static class DropConfigBuilder {
-        private SchemaConfig schemaConfig;
-        private boolean dropExported = DEFAULT_DROP_EXPORTED;
-
+    public static class DropConfigBuilder extends DropConfig {
         private DropConfigBuilder() {
         }
 
         public DropConfigBuilder schemaConfig(SchemaConfig schemaConfig) {
-            this.schemaConfig = schemaConfig;
+            this.setSchemaConfig(schemaConfig);
             return this;
         }
 
         public DropConfigBuilder dropExported(boolean dropExported) {
-            this.dropExported = dropExported;
+            this.setDropExported(dropExported);
             return this;
         }
 
         public DropConfig build() {
             DropConfig replicateConfig = new DropConfig();
-            replicateConfig.setSchemaConfig(schemaConfig);
-            replicateConfig.setDropExported(dropExported);
+            replicateConfig.setSchemaConfig(this.getSchemaConfig());
+            replicateConfig.setDropExported(this.isDropExported());
             return replicateConfig;
         }
     }

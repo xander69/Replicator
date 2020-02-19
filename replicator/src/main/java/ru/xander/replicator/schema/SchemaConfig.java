@@ -66,56 +66,49 @@ public class SchemaConfig {
         return new SchemaConfigBuilder();
     }
 
-    public static class SchemaConfigBuilder {
-
-        private String jdbcDriver;
-        private String jdbcUrl;
-        private String username;
-        private String password;
-        private String workSchema;
-        private Listener listener;
+    public static class SchemaConfigBuilder extends SchemaConfig {
 
         private SchemaConfigBuilder() {
         }
 
         public SchemaConfigBuilder jdbcDriver(String jdbcDriver) {
-            this.jdbcDriver = jdbcDriver;
+            this.setJdbcDriver(jdbcDriver);
             return this;
         }
 
         public SchemaConfigBuilder jdbcUrl(String jdbcUrl) {
-            this.jdbcUrl = jdbcUrl;
+            this.setJdbcUrl(jdbcUrl);
             return this;
         }
 
         public SchemaConfigBuilder username(String username) {
-            this.username = username;
+            this.setUsername(username);
             return this;
         }
 
         public SchemaConfigBuilder password(String password) {
-            this.password = password;
+            this.setPassword(password);
             return this;
         }
 
         public SchemaConfigBuilder workSchema(String workSchema) {
-            this.workSchema = workSchema;
+            this.setWorkSchema(workSchema);
             return this;
         }
 
         public SchemaConfigBuilder listener(Listener listener) {
-            this.listener = listener;
+            this.setListener(listener);
             return this;
         }
 
         public SchemaConfig build() {
             SchemaConfig schemaConfig = new SchemaConfig();
-            schemaConfig.setJdbcDriver(jdbcDriver);
-            schemaConfig.setJdbcUrl(jdbcUrl);
-            schemaConfig.setUsername(username);
-            schemaConfig.setPassword(password);
-            schemaConfig.setWorkSchema(workSchema);
-            schemaConfig.setListener(listener);
+            schemaConfig.setJdbcDriver(this.getJdbcDriver());
+            schemaConfig.setJdbcUrl(this.getJdbcUrl());
+            schemaConfig.setUsername(this.getUsername());
+            schemaConfig.setPassword(this.getPassword());
+            schemaConfig.setWorkSchema(this.getWorkSchema());
+            schemaConfig.setListener(this.getListener());
             return schemaConfig;
         }
     }

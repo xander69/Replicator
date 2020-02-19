@@ -3,11 +3,12 @@ package ru.xander.replicator.console;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.xander.replicator.listener.Alter;
-import ru.xander.replicator.listener.Progress;
-import ru.xander.replicator.listener.ReplicatorListener;
-import ru.xander.replicator.listener.SchemaListener;
+import ru.xander.replicator.listener.Listener;
 
-public class ConsoleListener implements ReplicatorListener, SchemaListener {
+/**
+ * @author Alexander Shakhov
+ */
+public class ConsoleListener implements Listener {
 
     private static final Logger log = LoggerFactory.getLogger(ConsoleListener.class);
 
@@ -25,24 +26,38 @@ public class ConsoleListener implements ReplicatorListener, SchemaListener {
     @Override
     public void alter(Alter event) {
         if (event.getExtra() == null) {
-            log.info("{}: {}", event.getType(), event.getObjectName());
+            log.info("<{}> {}: {}", schema, event.getType(), event.getObjectName());
         } else {
-            log.info("{}: {} ({})", event.getType(), event.getObjectName(), event.getExtra());
+            log.info("<{}> {}: {} ({})", schema, event.getType(), event.getObjectName(), event.getExtra());
         }
     }
 
     @Override
-    public void progress(Progress progress) {
-        long percent = (progress.getTotal() > 0) ? (long) (progress.getValue() / (double) progress.getTotal() * 100) : 0L;
-        if (progress.getMessage() == null) {
-            System.out.printf("%d/%d (%d %%)\n", progress.getValue(), progress.getTotal(), percent);
-        } else {
-            System.out.printf("%s: %d/%d (%d %%)\n", progress.getMessage(), progress.getValue(), progress.getTotal(), percent);
-        }
-    }
-
-    @Override
-    public void event(String message) {
+    public void notify(String message) {
         log.info("<{}> {}", schema, message);
     }
+
+    @Override
+    public void error(Exception e, String sql) {
+        if (sql == null) {
+            log.error("<{}> {}", schema, e.getMessage());
+        } else {
+            log.error("<{}> {}\n{}", schema, e.getMessage(), sql);
+        }
+    }
+
+    //    @Override
+//    public void progress(Progress progress) {
+//        long percent = (progress.getTotal() > 0) ? (long) (progress.getValue() / (double) progress.getTotal() * 100) : 0L;
+//        if (progress.getMessage() == null) {
+//            System.out.printf("%d/%d (%d %%)\n", progress.getValue(), progress.getTotal(), percent);
+//        } else {
+//            System.out.printf("%s: %d/%d (%d %%)\n", progress.getMessage(), progress.getValue(), progress.getTotal(), percent);
+//        }
+//    }
+//
+//    @Override
+//    public void event(String message) {
+//        log.info("<{}> {}", schema, message);
+//    }
 }

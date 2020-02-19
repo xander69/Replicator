@@ -8,14 +8,16 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.xander.replicator.DumpOptions;
-import ru.xander.replicator.Replicator;
-import ru.xander.replicator.schema.Schema;
+import ru.xander.replicator.action.DumpConfig;
+import ru.xander.replicator.action.ReplicatorActions;
 import ru.xander.replicator.schema.SchemaConfig;
 
 import java.io.File;
 import java.io.FileOutputStream;
 
+/**
+ * @author Alexander Shakhov
+ */
 @SuppressWarnings("DuplicatedCode")
 public class Main {
 
@@ -80,50 +82,49 @@ public class Main {
         }
     }
 
-    private void dump() throws Exception {
-        SchemaConfig sourceSchemaConfig = createSourceSchemaOption();
-        try (Schema sourceSchema = SchemaFactory.create(sourceSchemaConfig)) {
-            Replicator replicator = new Replicator(sourceSchema, sourceSchema, new ConsoleListener(null));
+    private void dump() {
+        File outPath = new File(System.getProperty("user.dir"), "dumps");
+        //noinspection ResultOfMethodCallIgnored
+        outPath.mkdirs();
 
-            File outPath = new File(System.getProperty("user.dir"), "dumps");
-            //noinspection ResultOfMethodCallIgnored
-            outPath.mkdirs();
-
-            String[] tables = commandLine.getOptionValue(PARAM_DUMP_TABLES).split(",");
-            for (String table : tables) {
-                String tableName = table.trim().toUpperCase();
-                File dumpFile = new File(outPath, tableName + ".sql");
-                try (FileOutputStream outputStream = new FileOutputStream(dumpFile)) {
-                    log.info("Dump table {}", tableName);
-                    replicator.dump(tableName, outputStream, new DumpOptions());
-                    log.info("Dump saved to {}", dumpFile.getAbsolutePath());
-                } catch (Exception e) {
-                    throw new RuntimeException("Ошибка при создании дампа для таблицы " + tableName, e);
-                }
+        String[] tables = commandLine.getOptionValue(PARAM_DUMP_TABLES).split(",");
+        for (String table : tables) {
+            String tableName = table.trim().toUpperCase();
+            File dumpFile = new File(outPath, tableName + ".sql");
+            try (FileOutputStream outputStream = new FileOutputStream(dumpFile)) {
+                log.info("Dump table {}", tableName);
+                ReplicatorActions.dump()
+                        .execute(DumpConfig.builder()
+                                .schemaConfig(createSourceSchemaConfig())
+                                .outputStream(outputStream));
+//                    replicator.dump(tableName, outputStream, new DumpConfig());
+                log.info("Dump saved to {}", dumpFile.getAbsolutePath());
+            } catch (Exception e) {
+                throw new RuntimeException("Ошибка при создании дампа для таблицы " + tableName, e);
             }
         }
     }
 
-    private SchemaConfig createSourceSchemaOption() {
-        SchemaConfig schemaConfig = new SchemaConfig();
-        schemaConfig.setJdbcDriver(commandLine.getOptionValue(PARAM_SRC_DRIVER));
-        schemaConfig.setJdbcUrl(commandLine.getOptionValue(PARAM_SRC_URL));
-        schemaConfig.setUsername(commandLine.getOptionValue(PARAM_SRC_USER));
-        schemaConfig.setPassword(commandLine.getOptionValue(PARAM_SRC_PWD));
-        schemaConfig.setWorkSchema(commandLine.getOptionValue(PARAM_SRC_SCHEMA));
-        schemaConfig.setListener(new ConsoleListener("SOURCE"));
-        return schemaConfig;
+    private SchemaConfig createSourceSchemaConfig() {
+        return SchemaConfig.builder()
+                .jdbcDriver(commandLine.getOptionValue(PARAM_SRC_DRIVER))
+                .jdbcUrl(commandLine.getOptionValue(PARAM_SRC_URL))
+                .username(commandLine.getOptionValue(PARAM_SRC_USER))
+                .password(commandLine.getOptionValue(PARAM_SRC_PWD))
+                .workSchema(commandLine.getOptionValue(PARAM_SRC_SCHEMA))
+                .listener(new ConsoleListener("SOURCE"))
+                .build();
     }
 
     private SchemaConfig createTargetSchemaOption() {
-        SchemaConfig schemaConfig = new SchemaConfig();
-        schemaConfig.setJdbcDriver(commandLine.getOptionValue(PARAM_TRG_DRIVER));
-        schemaConfig.setJdbcUrl(commandLine.getOptionValue(PARAM_TRG_URL));
-        schemaConfig.setUsername(commandLine.getOptionValue(PARAM_TRG_USER));
-        schemaConfig.setPassword(commandLine.getOptionValue(PARAM_TRG_PWD));
-        schemaConfig.setWorkSchema(commandLine.getOptionValue(PARAM_TRG_SCHEMA));
-        schemaConfig.setListener(new ConsoleListener("TARGET"));
-        return schemaConfig;
+        return SchemaConfig.builder()
+                .jdbcDriver(commandLine.getOptionValue(PARAM_TRG_DRIVER))
+                .jdbcUrl(commandLine.getOptionValue(PARAM_TRG_URL))
+                .username(commandLine.getOptionValue(PARAM_TRG_USER))
+                .password(commandLine.getOptionValue(PARAM_TRG_PWD))
+                .workSchema(commandLine.getOptionValue(PARAM_TRG_SCHEMA))
+                .listener(new ConsoleListener("TARGET"))
+                .build();
     }
 
     private void requireArgs(String... args) throws ParseException {

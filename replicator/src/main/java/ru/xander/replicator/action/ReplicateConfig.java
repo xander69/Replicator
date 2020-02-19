@@ -1,4 +1,4 @@
-package ru.xander.replicator;
+package ru.xander.replicator.action;
 
 import ru.xander.replicator.schema.SchemaConfig;
 
@@ -50,34 +50,30 @@ public class ReplicateConfig {
         return new ReplicateConfigBuilder();
     }
 
-    public static class ReplicateConfigBuilder {
-        private SchemaConfig sourceConfig;
-        private SchemaConfig targetConfig;
-        private boolean updateImported = DEFAULT_UPDATE_IMPORTED;
-
+    public static class ReplicateConfigBuilder extends ReplicateConfig {
         private ReplicateConfigBuilder() {
         }
 
         public ReplicateConfigBuilder sourceConfig(SchemaConfig sourceConfig) {
-            this.sourceConfig = sourceConfig;
+            this.setSourceConfig(sourceConfig);
             return this;
         }
 
         public ReplicateConfigBuilder targetConfig(SchemaConfig targetConfig) {
-            this.targetConfig = targetConfig;
+            this.setTargetConfig(targetConfig);
             return this;
         }
 
         public ReplicateConfigBuilder updateImported(boolean updateImported) {
-            this.updateImported = updateImported;
+            this.setUpdateImported(updateImported);
             return this;
         }
 
         public ReplicateConfig build() {
             ReplicateConfig replicateConfig = new ReplicateConfig();
-            replicateConfig.setSourceConfig(sourceConfig);
-            replicateConfig.setTargetConfig(targetConfig);
-            replicateConfig.setUpdateImported(updateImported);
+            replicateConfig.setSourceConfig(this.getSourceConfig());
+            replicateConfig.setTargetConfig(this.getTargetConfig());
+            replicateConfig.setUpdateImported(this.isUpdateImported());
             return replicateConfig;
         }
     }
