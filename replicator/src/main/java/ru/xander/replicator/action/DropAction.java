@@ -3,6 +3,7 @@ package ru.xander.replicator.action;
 import ru.xander.replicator.exception.ReplicatorException;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Schema;
+import ru.xander.replicator.schema.SchemaConfig;
 import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
@@ -14,19 +15,33 @@ import java.util.Set;
 /**
  * @author Alexander Shakhov
  */
-public class DropAction {
+public class DropAction implements Action {
 
-    public void execute(String tableName, DropConfig config) {
-        Objects.requireNonNull(tableName, "tableName");
-        Objects.requireNonNull(config, "config");
-        Objects.requireNonNull(config.getSchemaConfig(), "Configure schema");
-        try (SchemaConnection schema = new SchemaConnection(config.getSchemaConfig())) {
-            Set<String> droppedTables = new HashSet<>();
-            dropTable(tableName, schema.getSchema(), droppedTables, config);
+    private final SchemaConfig schemaConfig;
+    private final boolean dropExported;
+    private final String[] tables;
+
+    public DropAction(SchemaConfig schemaConfig, boolean dropExported, String[] tables) {
+        Objects.requireNonNull(schemaConfig, "Configure schema");
+        Objects.requireNonNull(tables, "Tables for drop");
+        if (tables.length == 0) {
+            throw new IllegalArgumentException("At least one table must be specified for drop");
+        }
+        this.schemaConfig = schemaConfig;
+        this.dropExported = dropExported;
+        this.tables = tables;
+    }
+
+    public void execute() {
+        try (SchemaConnection schema = new SchemaConnection(schemaConfig)) {
+            for (String tableName : tables) {
+                Set<String> droppedTables = new HashSet<>();
+                dropTable(tableName, schema.getSchema(), droppedTables);
+            }
         }
     }
 
-    private void dropTable(String tableName, Schema schema, Set<String> droppedTables, DropConfig config) {
+    private void dropTable(String tableName, Schema schema, Set<String> droppedTables) {
         if (droppedTables.contains(tableName)) {
             return;
         }
@@ -38,8 +53,8 @@ public class DropAction {
         }
 
         table.getExportedKeys().forEach(exportedKey -> {
-            if (config.isDropExported()) {
-                dropTable(exportedKey.getFkTableName(), schema, droppedTables, config);
+            if (dropExported) {
+                dropTable(exportedKey.getFkTableName(), schema, droppedTables);
             } else {
                 schema.dropConstraint(exportedKey);
             }

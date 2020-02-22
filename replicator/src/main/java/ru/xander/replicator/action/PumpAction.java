@@ -3,17 +3,38 @@ package ru.xander.replicator.action;
 import ru.xander.replicator.exception.ReplicatorException;
 import ru.xander.replicator.schema.BatchExecutor;
 import ru.xander.replicator.schema.Schema;
+import ru.xander.replicator.schema.SchemaConfig;
+import ru.xander.replicator.schema.SchemaConnection;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.util.Objects;
 
 /**
  * @author Alexander Shakhov
  */
-public class PumpAction {
-    public void execute(PumpConfig config) {
-        //TODO: implement me
+public class PumpAction implements Action {
+
+    private final SchemaConfig schemaConfig;
+    private final File[] scriptFiles;
+
+    public PumpAction(SchemaConfig schemaConfig, File[] scriptFiles) {
+        Objects.requireNonNull(schemaConfig, "Configure schema");
+        Objects.requireNonNull(scriptFiles, "Script files");
+        if (scriptFiles.length == 0) {
+            throw new IllegalArgumentException("At least one script file must be specified for pump");
+        }
+        this.schemaConfig = schemaConfig;
+        this.scriptFiles = scriptFiles;
+    }
+
+    public void execute() {
+        try (SchemaConnection schemaConnection = new SchemaConnection(schemaConfig)) {
+            for (File scriptFile : scriptFiles) {
+                pumpScript(schemaConnection.getSchema(), scriptFile);
+            }
+        }
     }
 
     private void pumpScript(Schema target, File scriptFile) {

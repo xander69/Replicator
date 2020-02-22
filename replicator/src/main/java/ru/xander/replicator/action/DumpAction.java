@@ -4,38 +4,66 @@ import ru.xander.replicator.exception.ReplicatorException;
 import ru.xander.replicator.schema.Ddl;
 import ru.xander.replicator.schema.Dml;
 import ru.xander.replicator.schema.Schema;
+import ru.xander.replicator.schema.SchemaConfig;
+import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.Table;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.Objects;
 
 /**
  * @author Alexander Shakhov
  */
-public class DumpAction {
+public class DumpAction implements Action {
 
-    public void execute(DumpConfig config) {
-        //TODO: implement me
+    private final SchemaConfig schemaConfig;
+    private final OutputStream output;
+    private final boolean dumpDdl;
+    private final boolean dumpDml;
+    private final Charset charset;
+    private final long verboseEach;
+    private final long commitEach;
+    private final String tableName;
+
+    public DumpAction(SchemaConfig schemaConfig, OutputStream output, boolean dumpDdl, boolean dumpDml, Charset charset, long verboseEach, long commitEach, String tableName) {
+        Objects.requireNonNull(schemaConfig, "Configure schema");
+        Objects.requireNonNull(output, "Output stream");
+        Objects.requireNonNull(tableName, "Table name for dump");
+        this.schemaConfig = schemaConfig;
+        this.output = output;
+        this.dumpDdl = dumpDdl;
+        this.dumpDml = dumpDml;
+        this.charset = charset;
+        this.verboseEach = verboseEach;
+        this.commitEach = commitEach;
+        this.tableName = tableName;
     }
 
-    private void dumpTable(Schema source, String tableName, OutputStream output, DumpConfig dumpConfig) {
-        Table sourceTable = source.getTable(tableName);
-        if (sourceTable == null) {
+    public void execute() {
+        try (SchemaConnection schemaConnection = new SchemaConnection(schemaConfig)) {
+            dumpTable(schemaConnection.getSchema());
+        }
+    }
+
+    private void dumpTable(Schema schema) {
+        Table table = schema.getTable(tableName);
+        if (table == null) {
             throw new ReplicatorException("Table " + tableName + " not found on source");
 //            return;
         }
         try {
-            if (dumpConfig.isDumpDdl()) {
-                Ddl ddl = source.getDdl(sourceTable);
-                dumpTableDdl(ddl, output, dumpConfig);
-                if (dumpConfig.isDumpDml()) {
+            if (dumpDdl) {
+                Ddl ddl = schema.getDdl(table);
+                dumpTableDdl(ddl);
+                if (dumpDml) {
                     output.write('\n');
-                    dumpTableDml(source, sourceTable, output, dumpConfig);
+                    dumpTableDml(schema, table);
                 }
-                dumpTableObjectsDdl(ddl, output, dumpConfig);
-            } else if (dumpConfig.isDumpDml()) {
-                dumpTableDml(source, sourceTable, output, dumpConfig);
+                dumpTableObjectsDdl(ddl);
+            } else if (dumpDml) {
+                dumpTableDml(schema, table);
             }
         } catch (Exception e) {
             String errorMessage = "Failed to dump table " + tableName + ": " + e.getMessage();
@@ -43,14 +71,13 @@ public class DumpAction {
         }
     }
 
-    private void dumpTableDdl(Ddl ddl, OutputStream output, DumpConfig dumpConfig) throws IOException {
-        output.write(ddl.getTable().getBytes(dumpConfig.getCharset()));
+    private void dumpTableDdl(Ddl ddl) throws IOException {
+        output.write(ddl.getTable().getBytes(charset));
         output.write(';');
         output.write('\n');
     }
 
-    private void dumpTableObjectsDdl(Ddl ddl, OutputStream output, DumpConfig dumpConfig) throws IOException {
-        final Charset charset = dumpConfig.getCharset();
+    private void dumpTableObjectsDdl(Ddl ddl) throws IOException {
         if (!ddl.getConstraints().isEmpty()) {
             output.write('\n');
             for (String constraint : ddl.getConstraints()) {
@@ -85,10 +112,7 @@ public class DumpAction {
         output.write('\n');
     }
 
-    private void dumpTableDml(Schema source, Table sourceTable, OutputStream output, DumpConfig dumpConfig) throws IOException {
-        final Charset charset = dumpConfig.getCharset();
-        final long verboseEach = dumpConfig.getVerboseEach();
-        final long commitEach = dumpConfig.getCommitEach();
+    private void dumpTableDml(Schema source, Table sourceTable) throws IOException {
         try (Dml dml = source.getDml(sourceTable)) {
             final String commitStatement = dml.getCommitStatement();
             String insertQuery;

@@ -8,8 +8,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.xander.replicator.action.DumpConfig;
-import ru.xander.replicator.action.ReplicatorActions;
+import ru.xander.replicator.Replicator;
 import ru.xander.replicator.schema.SchemaConfig;
 
 import java.io.File;
@@ -93,10 +92,12 @@ public class Main {
             File dumpFile = new File(outPath, tableName + ".sql");
             try (FileOutputStream outputStream = new FileOutputStream(dumpFile)) {
                 log.info("Dump table {}", tableName);
-                ReplicatorActions.dump()
-                        .execute(DumpConfig.builder()
-                                .schemaConfig(createSourceSchemaConfig())
-                                .outputStream(outputStream));
+                Replicator.dump()
+                        .schemaConfig(createSourceSchemaConfig())
+                        .outputStream(outputStream)
+                        .tableName(tableName)
+                        .configure()
+                        .execute();
 //                    replicator.dump(tableName, outputStream, new DumpConfig());
                 log.info("Dump saved to {}", dumpFile.getAbsolutePath());
             } catch (Exception e) {

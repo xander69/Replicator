@@ -6,6 +6,7 @@ import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Schema;
+import ru.xander.replicator.schema.SchemaConfig;
 import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
@@ -22,23 +23,39 @@ import java.util.stream.Collectors;
 /**
  * @author Alexander Shakhov
  */
-public class ReplicateAction {
+public class ReplicateAction implements Action {
 
-    public void execute(String tableName, ReplicateConfig config) {
-        Objects.requireNonNull(tableName, "tableName");
-        Objects.requireNonNull(config, "config");
-        Objects.requireNonNull(config.getSourceConfig(), "Configure source schema");
-        Objects.requireNonNull(config.getTargetConfig(), "Configure target schema");
+    private final SchemaConfig sourceConfig;
+    private final SchemaConfig targetConfig;
+    private final boolean updateImported;
+    private final String[] tables;
+
+    public ReplicateAction(SchemaConfig sourceConfig, SchemaConfig targetConfig, boolean updateImported, String[] tables) {
+        Objects.requireNonNull(sourceConfig, "Configure source schema");
+        Objects.requireNonNull(targetConfig, "Configure target schema");
+        Objects.requireNonNull(tables, "Tables for replicate");
+        if (tables.length == 0) {
+            throw new IllegalArgumentException("At least one table must be specified for replicate");
+        }
+        this.sourceConfig = sourceConfig;
+        this.targetConfig = targetConfig;
+        this.updateImported = updateImported;
+        this.tables = tables;
+    }
+
+    public void execute() {
         try (
-                SchemaConnection source = new SchemaConnection(config.getSourceConfig());
-                SchemaConnection target = new SchemaConnection(config.getTargetConfig())
+                SchemaConnection source = new SchemaConnection(sourceConfig);
+                SchemaConnection target = new SchemaConnection(targetConfig)
         ) {
-            Set<String> createdTables = new HashSet<>();
-            replicateTable(tableName, source.getSchema(), target.getSchema(), createdTables, config.isUpdateImported());
+            for (String tableName : tables) {
+                Set<String> createdTables = new HashSet<>();
+                replicateTable(tableName, source.getSchema(), target.getSchema(), createdTables);
+            }
         }
     }
 
-    private void replicateTable(String tableName, Schema source, Schema target, Set<String> createdTables, boolean updateImported) {
+    private void replicateTable(String tableName, Schema source, Schema target, Set<String> createdTables) {
         if (createdTables.contains(tableName)) {
             return;
         }
@@ -54,12 +71,19 @@ public class ReplicateAction {
             throw new ReplicatorException("Table " + tableName + " not found on source");
         }
 
-        sourceTable.getImportedKeys().forEach(importedKey -> {
-            String pkTableName = importedKey.getPkTableName();
-            replicateTable(pkTableName, source, target, createdTables, updateImported);
-        });
-
         Table targetTable = target.getTable(tableName);
+
+        // зависимости реплицируем только если это требуется опцией updateImported
+        // либо если этой таблицы ещё нет в схеме.
+        // второе условие требуется, т.к. возможно в схеме так же нет зависимостей для требуемой таблицы
+        // поэтому нужно принудительно их создать
+        if (update || (targetTable == null)) {
+            sourceTable.getImportedKeys().forEach(importedKey -> {
+                String pkTableName = importedKey.getPkTableName();
+                replicateTable(pkTableName, source, target, createdTables);
+            });
+        }
+
         if (targetTable == null) {
             createTable(target, sourceTable);
         } else if (update) {

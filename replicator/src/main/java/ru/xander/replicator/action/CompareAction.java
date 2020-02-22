@@ -10,6 +10,7 @@ import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Schema;
+import ru.xander.replicator.schema.SchemaConfig;
 import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
@@ -17,6 +18,7 @@ import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.util.StringUtils;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -25,16 +27,35 @@ import java.util.Objects;
 /**
  * @author Alexander Shakhov
  */
-public class CompareAction {
+public class CompareAction implements Action {
 
-    public CompareResult execute(String tableName, CompareConfig config) {
-        Objects.requireNonNull(config.getSourceConfig(), "Configure source schema");
-        Objects.requireNonNull(config.getTargetConfig(), "Configure target schema");
+    private final SchemaConfig sourceConfig;
+    private final SchemaConfig targetConfig;
+    private final String[] tables;
+
+    public CompareAction(SchemaConfig sourceConfig, SchemaConfig targetConfig, String[] tables) {
+        Objects.requireNonNull(sourceConfig, "Configure source schema");
+        Objects.requireNonNull(targetConfig, "Configure target schema");
+        Objects.requireNonNull(tables, "Tables for compare");
+        if (tables.length == 0) {
+            throw new IllegalArgumentException("At least one table must be specified for compare");
+        }
+        this.sourceConfig = sourceConfig;
+        this.targetConfig = targetConfig;
+        this.tables = tables;
+    }
+
+    public Map<String, CompareResult> execute() {
         try (
-                SchemaConnection source = new SchemaConnection(config.getSourceConfig());
-                SchemaConnection target = new SchemaConnection(config.getTargetConfig())
+                SchemaConnection source = new SchemaConnection(sourceConfig);
+                SchemaConnection target = new SchemaConnection(targetConfig)
         ) {
-            return compareTable(tableName, source.getSchema(), target.getSchema());
+            Map<String, CompareResult> resultMap = new HashMap<>();
+            for (String tableName : tables) {
+                CompareResult compareResult = compareTable(tableName, source.getSchema(), target.getSchema());
+                resultMap.put(tableName, compareResult);
+            }
+            return resultMap;
         }
     }
 
