@@ -1,5 +1,7 @@
 package ru.xander.replicator.schema;
 
+import java.util.Map;
+
 /**
  * @author Alexander Shakhov
  */
@@ -47,4 +49,12 @@ public interface Dialect {
     String dropSequenceQuery(Sequence sequence);
 
     String analyzeTableQuery(Table table);
+
+    default String commitQuery() {
+        return "COMMIT";
+    }
+
+    String insertQuery(Table table);
+
+    String insertQuery(Table table, Map<String, Object> values);
 }

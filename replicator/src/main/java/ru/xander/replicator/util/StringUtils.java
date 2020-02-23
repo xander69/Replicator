@@ -2,6 +2,9 @@ package ru.xander.replicator.util;
 
 import java.util.Objects;
 
+/**
+ * @author Alexander Shakhov
+ */
 public class StringUtils {
     public static boolean isEmpty(String str) {
         return (str == null) || str.isEmpty();

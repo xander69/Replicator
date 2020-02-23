@@ -5,6 +5,8 @@ import org.junit.Test;
 import ru.xander.replicator.compare.CompareResult;
 import ru.xander.replicator.compare.CompareResultType;
 
+import java.io.ByteArrayOutputStream;
+
 /**
  * @author Alexander Shakhov
  */
@@ -51,6 +53,22 @@ public class ReplicatorTest {
                 .configure()
                 .execute()
                 .forEach(this::printCompareResult);
+    }
+
+    @Test
+    public void dump() {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        Replicator.dump()
+                .schemaConfig(TestUtils.sourceSchemaOracle())
+                .outputStream(output)
+                .tableName("SAMPLE_TABLE")
+                .dumpDdl(true)
+                .dumpDml(true)
+                .verboseEash(4)
+                .commitEach(5)
+                .configure()
+                .execute();
+        System.out.println(output.toString());
     }
 
     private void printCompareResult(String tableName, CompareResult compareResult) {

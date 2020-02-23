@@ -1,7 +1,10 @@
 package ru.xander.replicator.action;
 
 import ru.xander.replicator.exception.ReplicatorException;
+import ru.xander.replicator.listener.Listener;
+import ru.xander.replicator.listener.Progress;
 import ru.xander.replicator.schema.Ddl;
+import ru.xander.replicator.schema.Dialect;
 import ru.xander.replicator.schema.Dml;
 import ru.xander.replicator.schema.Schema;
 import ru.xander.replicator.schema.SchemaConfig;
@@ -11,6 +14,7 @@ import ru.xander.replicator.schema.Table;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -50,20 +54,21 @@ public class DumpAction implements Action {
     private void dumpTable(Schema schema) {
         Table table = schema.getTable(tableName);
         if (table == null) {
-            throw new ReplicatorException("Table " + tableName + " not found on source");
-//            return;
+            throw new ReplicatorException("Table " + tableName + " not found");
         }
         try {
+            Ddl ddl = schema.getDdl(table);
             if (dumpDdl) {
-                Ddl ddl = schema.getDdl(table);
                 dumpTableDdl(ddl);
                 if (dumpDml) {
                     output.write('\n');
                     dumpTableDml(schema, table);
                 }
                 dumpTableObjectsDdl(ddl);
+                dumpAnalyze(ddl);
             } else if (dumpDml) {
                 dumpTableDml(schema, table);
+                dumpAnalyze(ddl);
             }
         } catch (Exception e) {
             String errorMessage = "Failed to dump table " + tableName + ": " + e.getMessage();
@@ -107,38 +112,55 @@ public class DumpAction implements Action {
                 output.write('\n');
             }
         }
+    }
+
+    private void dumpAnalyze(Ddl ddl) throws IOException {
         output.write('\n');
         output.write(ddl.getAnalyze().getBytes(charset));
         output.write('\n');
     }
 
-    private void dumpTableDml(Schema source, Table sourceTable) throws IOException {
-        try (Dml dml = source.getDml(sourceTable)) {
-            final String commitStatement = dml.getCommitStatement();
-            String insertQuery;
+    private void dumpTableDml(Schema schema, Table table) throws IOException {
+        try (Dml dml = schema.getDml(table)) {
+            final Dialect dialect = schema.getDialect();
             long totalRows = dml.getTotalRows();
             long currentRow = 0;
-            while ((insertQuery = dml.nextInsert()) != null) {
+
+            Map<String, Object> row;
+            while ((row = dml.nextRow()) != null) {
+                String insertQuery = dialect.insertQuery(table, row);
                 output.write(insertQuery.getBytes(charset));
                 output.write(';');
                 output.write('\n');
+
                 currentRow++;
                 if ((commitEach > 0) && ((currentRow % commitEach) == 0)) {
-                    output.write(commitStatement.getBytes(charset));
+                    output.write(dialect.commitQuery().getBytes(charset));
                     output.write(';');
                     output.write('\n');
                 }
+
                 if ((currentRow % verboseEach) == 0) {
-                    //TODO:
-//                    listener.progress(new Progress(currentRow, totalRows, "Dump table " + sourceTable.getName() + " from source"));
+                    progress("Dump table " + table.getName(), currentRow, totalRows);
                 }
             }
+
             if ((commitEach == 0) || ((currentRow % commitEach) != 0)) {
-                output.write(commitStatement.getBytes(charset));
+                output.write(dialect.commitQuery().getBytes(charset));
                 output.write(';');
                 output.write('\n');
             }
         }
     }
 
+    private void progress(String message, long value, long total) {
+        Listener listener = schemaConfig.getListener();
+        if (listener != null) {
+            Progress progress = new Progress();
+            progress.setMessage(message);
+            progress.setValue(value);
+            progress.setTotal(total);
+            listener.progress(progress);
+        }
+    }
 }

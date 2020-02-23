@@ -13,6 +13,7 @@ public class StdOutListener implements Listener {
     private static final String RED = "\u001B[31m";
     private static final String RESET = "\u001B[0m";
     private static final String BLUE = "\u001B[34m";
+    private static final String GREEN = "\u001B[32m";
     private static final String BRIGHT_BLACK = "\u001B[90m";
 
     private final DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
@@ -56,6 +57,13 @@ public class StdOutListener implements Listener {
         if (event.getSql() != null) {
             message += BRIGHT_BLACK + event.getSql() + RESET;
         }
+        printMessage(message);
+    }
+
+    @Override
+    public void progress(Progress progress) {
+        int percent = (int) ((double) progress.getValue() / progress.getTotal() * 100.0);
+        String message = String.format("%s%s (%d/%d, %d%%)%s", GREEN, progress.getMessage(), progress.getValue(), progress.getTotal(), percent, RESET);
         printMessage(message);
     }
 

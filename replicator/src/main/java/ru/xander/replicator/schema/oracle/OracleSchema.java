@@ -24,10 +24,8 @@ import ru.xander.replicator.schema.VendorType;
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 import static ru.xander.replicator.listener.AlterType.*;
 
@@ -237,7 +235,6 @@ public class OracleSchema extends AbstractSchema {
         execute(sql);
     }
 
-    //TODO: порефачить
     @Override
     public Ddl getDdl(Table table) {
         notify("Get DDL for table " + table.getName());
@@ -247,7 +244,6 @@ public class OracleSchema extends AbstractSchema {
             ddl.addConstraints(dialect.createPrimaryKeyQuery(table.getPrimaryKey()));
         }
         table.getImportedKeys().forEach(importedKey -> ddl.addConstraints(dialect.createImportedKeyQuery(importedKey)));
-//        table.getCheckConstraints().forEach(checkConstraint -> ddl.addConstraints(dialect.createCheckConstraintQuery(checkConstraint)));
         table.getIndices().forEach(index -> ddl.addIndex(dialect.createIndexQuery(index)));
         table.getTriggers().forEach(trigger -> ddl.addTrigger(dialect.createTriggerQuery(trigger)));
         if (table.getSequence() != null) {
@@ -257,27 +253,13 @@ public class OracleSchema extends AbstractSchema {
         return ddl;
     }
 
-    //TODO: порефачить
     @Override
     public Dml getDml(Table table) {
         notify("Get DML for table " + table.getName());
         try {
             String selectQuery = dialect.selectQuery(table);
-
-            long rowsCount = selectOne("select count(*) as cnt from (" + selectQuery + ")", rs -> rs.getLong("cnt"));
-
-            return new Dml(
-                    rowsCount,
-                    connection.prepareStatement(selectQuery),
-                    rs -> {
-                        Map<String, Object> row = new HashMap<>();
-                        for (Column column : table.getColumns()) {
-                            row.put(column.getName(), rs.getObject(column.getName()));
-                        }
-                        return dialect.insertQuery(table, row);
-                    },
-                    "COMMIT"
-            );
+            long totalRows = selectCount(selectQuery);
+            return new Dml(totalRows, connection.prepareStatement(selectQuery));
         } catch (Exception e) {
             String errorMessage = "Cannot get dml, cause by: " + e.getMessage();
             throw new SchemaException(errorMessage, e);
@@ -404,6 +386,7 @@ public class OracleSchema extends AbstractSchema {
         notify("Find trigger for table " + table.getName());
         select(dialect.selectTriggersQuery(table), rs -> {
             String description = rs.getString("description").trim();
+            String whenClause = rs.getString("when_clause");
             String triggerBody = rs.getString("trigger_body").trim();
             boolean enabled = "ENABLED".equals(rs.getString("status"));
 
@@ -420,7 +403,7 @@ public class OracleSchema extends AbstractSchema {
                 dependencies.add(dependency);
             });
 
-            String body = dialect.prepareTriggerBody(dependencies, description, triggerBody);
+            String body = dialect.prepareTriggerBody(dependencies, description, whenClause, triggerBody);
             trigger.setBody("CREATE OR REPLACE TRIGGER " + body);
             trigger.setEnabled(enabled);
             table.addTrigger(trigger);

@@ -4,6 +4,9 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * @author Alexander Shakhov
+ */
 public class Ddl {
     private String table;
     private List<String> constraints;

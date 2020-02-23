@@ -201,6 +201,7 @@ class OracleDialect implements Dialect {
                 "  T.TRIGGER_TYPE,\n" +
                 "  T.TRIGGERING_EVENT,\n" +
                 "  T.DESCRIPTION,\n" +
+                "  T.WHEN_CLAUSE,\n" +
                 "  T.TRIGGER_BODY,\n" +
                 "  T.STATUS\n" +
                 "FROM SYS.ALL_TRIGGERS T\n" +
@@ -427,17 +428,8 @@ class OracleDialect implements Dialect {
                 "END;";
     }
 
-    String selectQuery(Table table) {
-        return "SELECT " +
-                table.getColumns()
-                        .stream()
-                        .sorted()
-                        .map(Column::getName)
-                        .collect(Collectors.joining(",\n")) + '\n' +
-                "FROM " + getQualifiedName(table);
-    }
-
-    String insertQuery(Table table) {
+    @Override
+    public String insertQuery(Table table) {
         return "INSERT INTO " + getQualifiedName(table) + '\n' +
                 "(" +
                 table.getColumns()
@@ -452,7 +444,8 @@ class OracleDialect implements Dialect {
                         .collect(Collectors.joining(", ")) + ')';
     }
 
-    String insertQuery(Table table, Map<String, Object> values) {
+    @Override
+    public String insertQuery(Table table, Map<String, Object> values) {
         //TODO: не поддерживаются BLOB-поля
         return "INSERT INTO " + getQualifiedName(table) +
                 " (" +
@@ -473,6 +466,16 @@ class OracleDialect implements Dialect {
                         .collect(Collectors.joining(", ")) + ')';
     }
 
+    String selectQuery(Table table) {
+        return "SELECT " +
+                table.getColumns()
+                        .stream()
+                        .sorted()
+                        .map(Column::getName)
+                        .collect(Collectors.joining(",\n")) + '\n' +
+                "FROM " + getQualifiedName(table);
+    }
+
     String selectObjectQuery(String objectName, String objectType) {
         return "SELECT *\n" +
                 "FROM SYS.ALL_OBJECTS\n" +
@@ -481,7 +484,7 @@ class OracleDialect implements Dialect {
                 "      AND OBJECT_TYPE = '" + objectType + '\'';
     }
 
-    String prepareTriggerBody(List<OracleTriggerDependency> dependencies, String description, String body) {
+    String prepareTriggerBody(List<OracleTriggerDependency> dependencies, String description, String whenClause, String body) {
         String upperedDescr = description.toUpperCase();
 //        String upperedBody = body.toUpperCase();
         for (OracleTriggerDependency dependency : dependencies) {
@@ -500,11 +503,16 @@ class OracleDialect implements Dialect {
 //                }
 //            }
         }
+        StringBuilder triggerBody = new StringBuilder();
         if (!upperedDescr.startsWith(workSchema)) {
-            return workSchema + '.' + description + '\n' + body;
-        } else {
-            return description + '\n' + body;
+            triggerBody.append(workSchema).append('.');
         }
+        triggerBody.append(description);
+        if (!StringUtils.isEmpty(whenClause)) {
+            triggerBody.append(" WHEN (").append(whenClause.trim()).append(')');
+        }
+        triggerBody.append('\n').append(body);
+        return triggerBody.toString();
     }
 
     private static String getColumnDefinition(Column column) {

@@ -4,7 +4,6 @@ package ru.xander.replicator.listener;
  * @author Alexander Shakhov
  */
 public interface Listener {
-
     default void notify(String message) {
         // do nothing
     }
@@ -18,6 +17,10 @@ public interface Listener {
     }
 
     default void alter(Alter event) {
+        // do nothing
+    }
+
+    default void progress(Progress progress) {
         // do nothing
     }
 }

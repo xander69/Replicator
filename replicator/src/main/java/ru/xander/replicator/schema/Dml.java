@@ -1,42 +1,41 @@
 package ru.xander.replicator.schema;
 
 import ru.xander.replicator.exception.SchemaException;
-import ru.xander.replicator.util.RowMapper;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 
+/**
+ * @author Alexander Shakhov
+ */
 public class Dml implements AutoCloseable {
 
-    private final PreparedStatement ps;
-    private final RowMapper<String> insertMapper;
     private final long totalRows;
-    private final String commitStatement;
+    private final PreparedStatement ps;
     private ResultSet resultSet;
+    private String[] columns;
 
-    public Dml(long totalRows, PreparedStatement ps, RowMapper<String> insertMapper, String commitStatement) {
+    public Dml(long totalRows, PreparedStatement ps) {
         this.totalRows = totalRows;
         this.ps = ps;
-        this.insertMapper = insertMapper;
-        this.commitStatement = commitStatement;
     }
 
     public long getTotalRows() {
         return totalRows;
     }
 
-    public String getCommitStatement() {
-        return commitStatement;
-    }
-
-    public String nextInsert() {
+    public Map<String, Object> nextRow() {
         try {
             if (resultSet == null) {
                 resultSet = ps.executeQuery();
+                initColumns();
             }
             if (resultSet.next()) {
-                return insertMapper.map(resultSet);
+                return mapRow(resultSet);
             } else {
                 return null;
             }
@@ -44,6 +43,22 @@ public class Dml implements AutoCloseable {
             String errorMessage = "Error occurred while prepare insert query: " + e.getMessage();
             throw new SchemaException(errorMessage, e);
         }
+    }
+
+    private void initColumns() throws SQLException {
+        ResultSetMetaData metaData = resultSet.getMetaData();
+        columns = new String[metaData.getColumnCount()];
+        for (int colNum = 1; colNum <= metaData.getColumnCount(); colNum++) {
+            columns[colNum - 1] = metaData.getColumnName(colNum);
+        }
+    }
+
+    private Map<String, Object> mapRow(ResultSet resultSet) throws SQLException {
+        Map<String, Object> row = new HashMap<>();
+        for (String column : columns) {
+            row.put(column, resultSet.getObject(column));
+        }
+        return row;
     }
 
     @Override
