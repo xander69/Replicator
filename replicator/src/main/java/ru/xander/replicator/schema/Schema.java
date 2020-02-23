@@ -1,5 +1,9 @@
 package ru.xander.replicator.schema;
 
+import ru.xander.replicator.filter.Filter;
+
+import java.util.List;
+
 /**
  * @author Alexander Shakhov
  */
@@ -8,6 +12,8 @@ public interface Schema {
     VendorType getVendorType();
 
     Dialect getDialect();
+
+    List<String> getTables(List<Filter> filterList);
 
     Table getTable(String tableName);
 

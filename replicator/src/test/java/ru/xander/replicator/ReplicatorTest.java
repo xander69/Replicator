@@ -11,6 +11,17 @@ import ru.xander.replicator.compare.CompareResultType;
 @Ignore
 public class ReplicatorTest {
     @Test
+    public void tableList() {
+        Replicator.tableList()
+                .schemaConfig(TestUtils.sourceSchemaOracle())
+                .like("%EXE%")
+                .notLike("%$%")
+                .configure()
+                .execute()
+                .forEach(System.out::println);
+    }
+
+    @Test
     public void replicate() {
         Replicator.replicate()
                 .sourceConfig(TestUtils.sourceSchemaOracle())

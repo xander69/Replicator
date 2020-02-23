@@ -1,6 +1,7 @@
 package ru.xander.replicator.schema.oracle;
 
 import ru.xander.replicator.exception.SchemaException;
+import ru.xander.replicator.filter.Filter;
 import ru.xander.replicator.listener.AlterType;
 import ru.xander.replicator.listener.Listener;
 import ru.xander.replicator.schema.AbstractSchema;
@@ -24,6 +25,7 @@ import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -51,6 +53,11 @@ public class OracleSchema extends AbstractSchema {
     @Override
     public Dialect getDialect() {
         return dialect;
+    }
+
+    @Override
+    public List<String> getTables(List<Filter> filterList) {
+        return findTables(filterList);
     }
 
     @Override
@@ -275,6 +282,13 @@ public class OracleSchema extends AbstractSchema {
             String errorMessage = "Cannot get dml, cause by: " + e.getMessage();
             throw new SchemaException(errorMessage, e);
         }
+    }
+
+    private List<String> findTables(List<Filter> filterList) {
+        notify("Find tables");
+        List<String> tableList = new LinkedList<>();
+        select(dialect.selectTablesQuery(filterList), rs -> tableList.add(rs.getString("TABLE_NAME")));
+        return tableList;
     }
 
     private Table findTable(String tableName) {

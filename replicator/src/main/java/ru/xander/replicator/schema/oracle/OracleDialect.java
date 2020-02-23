@@ -1,6 +1,8 @@
 package ru.xander.replicator.schema.oracle;
 
 import ru.xander.replicator.exception.SchemaException;
+import ru.xander.replicator.filter.Filter;
+import ru.xander.replicator.filter.FilterType;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnDiff;
 import ru.xander.replicator.schema.ColumnType;
@@ -40,6 +42,23 @@ class OracleDialect implements Dialect {
 
     OracleDialect(String workSchema) {
         this.workSchema = workSchema;
+    }
+
+    String selectTablesQuery(List<Filter> filterList) {
+        StringBuilder sql = new StringBuilder();
+        sql
+                .append("SELECT\n")
+                .append("  T.TABLE_NAME\n")
+                .append("FROM SYS.ALL_TABLES T\n")
+                .append("WHERE T.OWNER = '").append(workSchema).append("'\n");
+        if (filterList != null) {
+            for (Filter filter : filterList) {
+                String op = filter.getType() == FilterType.NOT_LIKE ? "NOT LIKE" : "LIKE";
+                sql.append("      AND T.TABLE_NAME ").append(op).append(" '").append(filter.getValue()).append("'\n");
+            }
+        }
+        sql.append("ORDER BY T.TABLE_NAME");
+        return sql.toString();
     }
 
     String selectTableQuery(String tableName) {
