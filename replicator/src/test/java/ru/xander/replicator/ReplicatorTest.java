@@ -54,6 +54,7 @@ public class ReplicatorTest {
     }
 
     private void printCompareResult(String tableName, CompareResult compareResult) {
+        System.out.println("======================================================");
         System.out.println("Compare table " + tableName);
 
         if (compareResult.getResultType() == CompareResultType.ABSENT_ON_SOURCE) {

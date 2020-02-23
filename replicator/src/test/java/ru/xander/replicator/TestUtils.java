@@ -1,5 +1,6 @@
 package ru.xander.replicator;
 
+import ru.xander.replicator.listener.StdOutListener;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.SchemaConfig;
 import ru.xander.replicator.schema.Sequence;
@@ -16,7 +17,7 @@ public final class TestUtils {
                 .username("scott")
                 .password("scott")
                 .workSchema("scott")
-                .listener(new TestListener("SOURCE"))
+                .listener(new StdOutListener("SOURCE"))
                 .build();
     }
 
@@ -27,7 +28,7 @@ public final class TestUtils {
                 .username("tiger")
                 .password("tiger")
                 .workSchema("tiger")
-                .listener(new TestListener("TARGET"))
+                .listener(new StdOutListener("TARGET"))
                 .build();
     }
 
