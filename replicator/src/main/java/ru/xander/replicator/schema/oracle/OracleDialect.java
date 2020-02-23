@@ -254,7 +254,7 @@ class OracleDialect implements Dialect {
     }
 
     @Override
-    public String modifyColumnQuery(Column column, ColumnDiff[] columnDiffs) {
+    public String modifyColumnQuery(Column column, ColumnDiff... columnDiffs) {
         StringBuilder modify = new StringBuilder();
         if (ColumnDiff.DATATYPE.anyOf(columnDiffs)) {
             modify.append(getDataType(column)).append(' ');
@@ -321,6 +321,12 @@ class OracleDialect implements Dialect {
     public String toggleConstraintQuery(Constraint constraint, boolean enabled) {
         return "ALTER TABLE " + getQualifiedName(constraint.getTable()) + ' '
                 + (enabled ? "ENABLE" : "DISABLE") + " CONSTRAINT " + constraint.getName();
+    }
+
+    @Override
+    public String renameConstraintQuery(Constraint constraint, String newConstraintName) {
+        return "ALTER TABLE " + getQualifiedName(constraint.getTable()) + ' '
+                + " RENAME CONSTRAINT " + constraint.getName() + " TO " + newConstraintName;
     }
 
     @Override

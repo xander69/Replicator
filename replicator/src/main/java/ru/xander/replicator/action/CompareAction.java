@@ -6,6 +6,7 @@ import ru.xander.replicator.compare.CompareResult;
 import ru.xander.replicator.compare.CompareResultType;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnDiff;
+import ru.xander.replicator.schema.Dialect;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.PrimaryKey;
@@ -23,6 +24,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * @author Alexander Shakhov
@@ -68,34 +70,42 @@ public class CompareAction implements Action {
         if (targetTable == null) {
             return new CompareResult(CompareResultType.ABSENT_ON_TARGET, Collections.emptyList());
         }
-        List<CompareDiff> diffs = new LinkedList<>();
-        compareTableComment(sourceTable, targetTable, diffs);
-        compareColumns(sourceTable, targetTable, diffs);
-        comparePrimaryKey(sourceTable, targetTable, diffs);
-        compareImportedKeys(sourceTable, targetTable, diffs);
-        compareIndexes(sourceTable, targetTable, diffs);
-        compareTriggers(sourceTable, targetTable, diffs);
-        compareSequence(sourceTable, targetTable, diffs);
-        if (diffs.isEmpty()) {
+        DiffCollector diffCollector = new DiffCollector(target);
+        compareTableComment(sourceTable, targetTable, diffCollector);
+        compareColumns(sourceTable, targetTable, diffCollector);
+        comparePrimaryKey(sourceTable, targetTable, diffCollector);
+        compareImportedKeys(sourceTable, targetTable, diffCollector);
+        compareIndexes(sourceTable, targetTable, diffCollector);
+        compareTriggers(sourceTable, targetTable, diffCollector);
+        compareSequence(sourceTable, targetTable, diffCollector);
+        if (diffCollector.diffs.isEmpty()) {
             return new CompareResult(CompareResultType.EQUALS, Collections.emptyList());
         } else {
-            return new CompareResult(CompareResultType.DIFFERENT, diffs);
+            return new CompareResult(CompareResultType.DIFFERENT, diffCollector.diffs);
         }
     }
 
-    private void compareTableComment(Table sourceTable, Table targetTable, List<CompareDiff> diffs) {
+    private void compareTableComment(Table sourceTable, Table targetTable, DiffCollector diffCollector) {
         if (!StringUtils.equalsStringIgnoreWhiteSpace(sourceTable.getComment(), targetTable.getComment())) {
-            diffs.add(new CompareDiff(CompareKind.TABLE_COMMENT, sourceTable.getComment(), targetTable.getComment()));
+            diffCollector.add(
+                    CompareKind.TABLE_COMMENT,
+                    sourceTable.getComment(),
+                    targetTable.getComment(),
+                    dialect -> dialect.createTableCommentQuery(sourceTable));
         }
     }
 
-    private void compareColumns(Table sourceTable, Table targetTable, List<CompareDiff> diffs) {
+    private void compareColumns(Table sourceTable, Table targetTable, DiffCollector diffCollector) {
         Map<String, Column> sourceColumns = sourceTable.getColumnMap();
         Map<String, Column> targetColumns = targetTable.getColumnMap();
         sourceColumns.forEach((columnName, sourceColumn) -> {
             Column targetColumn = targetColumns.get(columnName);
             if (targetColumn == null) {
-                diffs.add(new CompareDiff(CompareKind.COLUMN_ABSENT_ON_TARGET, columnName, null));
+                diffCollector.add(
+                        CompareKind.COLUMN_ABSENT_ON_TARGET,
+                        columnName,
+                        null,
+                        dialect -> dialect.createColumnQuery(sourceColumn));
             } else {
                 ColumnDiff[] columnDiffs = sourceColumn.getDiffs(targetColumn);
                 for (ColumnDiff columnDiff : columnDiffs) {
@@ -107,164 +117,266 @@ public class CompareAction implements Action {
                             String targetDatatype = targetColumn.getColumnType()
                                     + ", size: " + targetColumn.getSize()
                                     + ", scale: " + targetColumn.getScale();
-                            diffs.add(new CompareDiff(CompareKind.COLUMN_DATATYPE, sourceDatatype, targetDatatype));
+
+                            diffCollector.add(
+                                    CompareKind.COLUMN_DATATYPE,
+                                    sourceDatatype,
+                                    targetDatatype,
+                                    dialect -> dialect.modifyColumnQuery(sourceColumn, ColumnDiff.DATATYPE));
                             break;
                         case MANDATORY:
-                            diffs.add(new CompareDiff(CompareKind.COLUMN_MANDATORY,
+                            diffCollector.add(
+                                    CompareKind.COLUMN_MANDATORY,
                                     String.valueOf(sourceColumn.isNullable()),
-                                    String.valueOf(targetColumn.isNullable())));
+                                    String.valueOf(targetColumn.isNullable()),
+                                    dialect -> dialect.modifyColumnQuery(sourceColumn, ColumnDiff.MANDATORY));
                             break;
                         case DEFAULT:
-                            diffs.add(new CompareDiff(CompareKind.COLUMN_DEFAULT,
+                            diffCollector.add(
+                                    CompareKind.COLUMN_DEFAULT,
                                     sourceColumn.getDefaultValue(),
-                                    targetColumn.getDefaultValue()));
+                                    targetColumn.getDefaultValue(),
+                                    dialect -> dialect.modifyColumnQuery(sourceColumn, ColumnDiff.DEFAULT));
                             break;
                     }
                 }
                 if (!StringUtils.equalsStringIgnoreWhiteSpace(sourceColumn.getComment(), targetColumn.getComment())) {
-                    diffs.add(new CompareDiff(CompareKind.COLUMN_COMMENT, sourceColumn.getComment(), targetColumn.getComment()));
+                    diffCollector.add(
+                            CompareKind.COLUMN_COMMENT,
+                            sourceColumn.getComment(),
+                            targetColumn.getComment(),
+                            dialect -> dialect.createColumnCommentQuery(sourceColumn));
                 }
             }
         });
         targetColumns.forEach((columnName, targetColumn) -> {
             if (!sourceColumns.containsKey(columnName)) {
-                diffs.add(new CompareDiff(CompareKind.COLUMN_ABSENT_ON_SOURCE, null, columnName));
+                diffCollector.add(
+                        CompareKind.COLUMN_ABSENT_ON_SOURCE,
+                        null,
+                        columnName,
+                        dialect -> dialect.dropColumnQuery(targetColumn));
             }
         });
     }
 
-    private void comparePrimaryKey(Table sourceTable, Table targetTable, List<CompareDiff> diffs) {
+    private void comparePrimaryKey(Table sourceTable, Table targetTable, DiffCollector diffCollector) {
         PrimaryKey sourcePrimaryKey = sourceTable.getPrimaryKey();
         PrimaryKey targetPrimaryKey = targetTable.getPrimaryKey();
         if ((sourcePrimaryKey == null) && (targetPrimaryKey == null)) {
             return;
         }
         if (targetPrimaryKey == null) {
-            diffs.add(new CompareDiff(CompareKind.PRIMARY_KEY_ABSENT_ON_TARGET, sourcePrimaryKey.getName(), null));
+            diffCollector.add(
+                    CompareKind.PRIMARY_KEY_ABSENT_ON_TARGET,
+                    sourcePrimaryKey.getName(),
+                    null,
+                    dialect -> dialect.createPrimaryKeyQuery(sourcePrimaryKey));
             return;
         }
         if (sourcePrimaryKey == null) {
-            diffs.add(new CompareDiff(CompareKind.PRIMARY_KEY_ABSENT_ON_SOURCE, null, targetPrimaryKey.getName()));
+            diffCollector.add(
+                    CompareKind.PRIMARY_KEY_ABSENT_ON_SOURCE,
+                    null,
+                    targetPrimaryKey.getName(),
+                    dialect -> dialect.dropPrimaryKeyQuery(targetPrimaryKey));
             return;
         }
         if (!Objects.equals(sourcePrimaryKey.getName(), targetPrimaryKey.getName())) {
-            diffs.add(new CompareDiff(CompareKind.PRIMARY_KEY_NAME, sourcePrimaryKey.getName(), targetPrimaryKey.getName()));
+            diffCollector.add(
+                    CompareKind.PRIMARY_KEY_NAME,
+                    sourcePrimaryKey.getName(),
+                    targetPrimaryKey.getName(),
+                    dialect -> dialect.renameConstraintQuery(targetPrimaryKey, sourcePrimaryKey.getName()));
         }
         if (!Objects.equals(sourcePrimaryKey.getColumnName(), targetPrimaryKey.getColumnName())) {
-            diffs.add(new CompareDiff(CompareKind.PRIMARY_KEY_COLUMN, sourcePrimaryKey.getColumnName(), targetPrimaryKey.getColumnName()));
+            diffCollector.add(
+                    CompareKind.PRIMARY_KEY_COLUMN,
+                    sourcePrimaryKey.getColumnName(),
+                    targetPrimaryKey.getColumnName(),
+                    // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
+                    dialect -> dialect.dropPrimaryKeyQuery(targetPrimaryKey) + "\n" + dialect.createPrimaryKeyQuery(sourcePrimaryKey));
         }
     }
 
-    private void compareImportedKeys(Table sourceTable, Table targetTable, List<CompareDiff> diffs) {
+    private void compareImportedKeys(Table sourceTable, Table targetTable, DiffCollector diffCollector) {
         Map<String, ImportedKey> sourceImportedKeys = sourceTable.getImportedKeyMap();
         Map<String, ImportedKey> targetImportedKeys = targetTable.getImportedKeyMap();
         sourceImportedKeys.forEach((importedKeyName, sourceImportedKey) -> {
             ImportedKey targetImportedKey = targetImportedKeys.get(importedKeyName);
             if (targetImportedKey == null) {
-                diffs.add(new CompareDiff(CompareKind.IMPORTED_KEY_ABSENT_ON_TARGET, importedKeyName, null));
+                diffCollector.add(
+                        CompareKind.IMPORTED_KEY_ABSENT_ON_TARGET,
+                        importedKeyName,
+                        null,
+                        dialect -> dialect.createImportedKeyQuery(sourceImportedKey));
             } else {
                 if (!Objects.equals(sourceImportedKey.getColumnName(), targetImportedKey.getColumnName())) {
-                    diffs.add(new CompareDiff(CompareKind.IMPORTED_KEY_COLUMN,
+                    diffCollector.add(
+                            CompareKind.IMPORTED_KEY_COLUMN,
                             sourceImportedKey.getColumnName(),
-                            targetImportedKey.getColumnName()));
+                            targetImportedKey.getColumnName(),
+                            // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
+                            dialect -> dialect.dropConstraintQuery(targetImportedKey) + "\n" + dialect.createImportedKeyQuery(sourceImportedKey));
                 }
                 if (!Objects.equals(sourceImportedKey.getPkName(), targetImportedKey.getPkName())) {
-                    diffs.add(new CompareDiff(CompareKind.IMPORTED_KEY_PK_NAME,
+                    diffCollector.add(
+                            CompareKind.IMPORTED_KEY_PK_NAME,
                             sourceImportedKey.getPkName(),
-                            targetImportedKey.getPkName()));
+                            targetImportedKey.getPkName(),
+                            // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
+                            dialect -> dialect.dropConstraintQuery(targetImportedKey) + "\n" + dialect.createImportedKeyQuery(sourceImportedKey));
                 }
                 if (!Objects.equals(sourceImportedKey.getPkTableName(), targetImportedKey.getPkTableName())) {
-                    diffs.add(new CompareDiff(CompareKind.IMPORTED_KEY_PK_TABLE,
+                    diffCollector.add(
+                            CompareKind.IMPORTED_KEY_PK_TABLE,
                             sourceImportedKey.getPkTableName(),
-                            targetImportedKey.getPkTableName()));
+                            targetImportedKey.getPkTableName(),
+                            // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
+                            dialect -> dialect.dropConstraintQuery(targetImportedKey) + "\n" + dialect.createImportedKeyQuery(sourceImportedKey));
                 }
                 if (!Objects.equals(sourceImportedKey.getPkColumnName(), targetImportedKey.getPkColumnName())) {
-                    diffs.add(new CompareDiff(CompareKind.IMPORTED_KEY_PK_COLUMN,
+                    diffCollector.add(
+                            CompareKind.IMPORTED_KEY_PK_COLUMN,
                             sourceImportedKey.getPkColumnName(),
-                            targetImportedKey.getPkColumnName()));
+                            targetImportedKey.getPkColumnName(),
+                            // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
+                            dialect -> dialect.dropConstraintQuery(targetImportedKey) + "\n" + dialect.createImportedKeyQuery(sourceImportedKey));
                 }
             }
         });
         targetImportedKeys.forEach((importedKeyName, targetImportedKey) -> {
             if (!sourceImportedKeys.containsKey(importedKeyName)) {
-                diffs.add(new CompareDiff(CompareKind.IMPORTED_KEY_ABSENT_ON_SOURCE, null, importedKeyName));
+                diffCollector.add(
+                        CompareKind.IMPORTED_KEY_ABSENT_ON_SOURCE,
+                        null,
+                        importedKeyName,
+                        dialect -> dialect.dropConstraintQuery(targetImportedKey));
             }
         });
     }
 
-    private void compareIndexes(Table sourceTable, Table targetTable, List<CompareDiff> diffs) {
+    private void compareIndexes(Table sourceTable, Table targetTable, DiffCollector diffCollector) {
         Map<String, Index> sourceIndexes = sourceTable.getIndexMap();
         Map<String, Index> targetIndexes = targetTable.getIndexMap();
         sourceIndexes.forEach((indexName, sourceIndex) -> {
             Index targetIndex = targetIndexes.get(indexName);
             if (targetIndex == null) {
-                diffs.add(new CompareDiff(CompareKind.INDEX_ABSENT_ON_TARGET, indexName, null));
+                diffCollector.add(
+                        CompareKind.INDEX_ABSENT_ON_TARGET,
+                        indexName,
+                        null,
+                        dialect -> dialect.createIndexQuery(sourceIndex));
             } else {
                 if (!Objects.equals(sourceIndex.getType(), targetIndex.getType())) {
-                    diffs.add(new CompareDiff(CompareKind.INDEX_TYPE,
+                    diffCollector.add(
+                            CompareKind.INDEX_TYPE,
                             String.valueOf(sourceIndex.getType()),
-                            String.valueOf(targetIndex.getType())));
+                            String.valueOf(targetIndex.getType()),
+                            // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
+                            dialect -> dialect.dropIndexQuery(targetIndex) + "\n" + dialect.createIndexQuery(sourceIndex));
                 }
                 if (!Objects.equals(sourceIndex.getColumns(), targetIndex.getColumns())) {
-                    diffs.add(new CompareDiff(CompareKind.INDEX_COLUMNS,
+                    diffCollector.add(
+                            CompareKind.INDEX_COLUMNS,
                             String.join(", ", sourceIndex.getColumns()),
-                            String.join(", ", targetIndex.getColumns())));
+                            String.join(", ", targetIndex.getColumns()),
+                            // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
+                            dialect -> dialect.dropIndexQuery(targetIndex) + "\n" + dialect.createIndexQuery(sourceIndex));
                 }
-//                if (!Objects.equals(sourceIndex.getEnabled(), targetIndex.getEnabled())) {
-//                    diffs.add(new CompareDiff(CompareKind.INDEX_ENABLED,
-//                            String.valueOf(sourceIndex.getEnabled()),
-//                            String.valueOf(targetIndex.getEnabled())));
-//                }
             }
         });
         targetIndexes.forEach((indexName, targetIndex) -> {
             if (!sourceIndexes.containsKey(indexName)) {
-                diffs.add(new CompareDiff(CompareKind.INDEX_ABSENT_ON_SOURCE, null, indexName));
+                diffCollector.add(
+                        CompareKind.INDEX_ABSENT_ON_SOURCE,
+                        null,
+                        indexName,
+                        dialect -> dialect.dropIndexQuery(targetIndex));
             }
         });
     }
 
-    private void compareTriggers(Table sourceTable, Table targetTable, List<CompareDiff> diffs) {
+    private void compareTriggers(Table sourceTable, Table targetTable, DiffCollector diffCollector) {
         Map<String, Trigger> sourceTriggers = sourceTable.getTriggerMap();
         Map<String, Trigger> targetTriggers = targetTable.getTriggerMap();
         sourceTriggers.forEach((triggerName, sourceTrigger) -> {
             Trigger targetTrigger = targetTriggers.get(triggerName);
             if (targetTrigger == null) {
-                diffs.add(new CompareDiff(CompareKind.TRIGGER_ABSENT_ON_TARGET, triggerName, null));
+                diffCollector.add(
+                        CompareKind.TRIGGER_ABSENT_ON_TARGET,
+                        triggerName,
+                        null,
+                        dialect -> dialect.createTriggerQuery(sourceTrigger));
             } else {
                 if (!StringUtils.equalsStringIgnoreWhiteSpace(sourceTrigger.getBody(), targetTrigger.getBody())) {
-                    diffs.add(new CompareDiff(CompareKind.TRIGGER_BODY, sourceTrigger.getBody(), targetTrigger.getBody()));
+                    diffCollector.add(
+                            CompareKind.TRIGGER_BODY,
+                            sourceTrigger.getBody(),
+                            targetTrigger.getBody(),
+                            dialect -> dialect.createTriggerQuery(sourceTrigger));
                 }
-//                if (!Objects.equals(sourceTrigger.getEnabled(), targetTrigger.getEnabled())) {
-//                    diffs.add(new CompareDiff(CompareKind.TRIGGER_ENABLED,
-//                            String.valueOf(sourceTrigger.getEnabled()),
-//                            String.valueOf(targetTrigger.getEnabled())));
-//                }
             }
         });
         targetTriggers.forEach((triggerName, targetTrigger) -> {
             if (!sourceTriggers.containsKey(triggerName)) {
-                diffs.add(new CompareDiff(CompareKind.TRIGGER_ABSENT_ON_SOURCE, null, triggerName));
+                diffCollector.add(
+                        CompareKind.TRIGGER_ABSENT_ON_SOURCE,
+                        null,
+                        triggerName,
+                        dialect -> dialect.dropTriggerQuery(targetTrigger));
             }
         });
     }
 
-    private void compareSequence(Table sourceTable, Table targetTable, List<CompareDiff> diffs) {
+    private void compareSequence(Table sourceTable, Table targetTable, DiffCollector diffCollector) {
         Sequence sourceSequence = sourceTable.getSequence();
         Sequence targetSequence = targetTable.getSequence();
         if ((sourceSequence == null) && (targetSequence == null)) {
             return;
         }
         if (targetSequence == null) {
-            diffs.add(new CompareDiff(CompareKind.SEQUENCE_ABSENT_ON_TARGET, sourceSequence.getName(), null));
+            diffCollector.add(
+                    CompareKind.SEQUENCE_ABSENT_ON_TARGET,
+                    sourceSequence.getName(),
+                    null,
+                    dialect -> dialect.createSequenceQuery(sourceSequence));
             return;
         }
         if (sourceSequence == null) {
-            diffs.add(new CompareDiff(CompareKind.SEQUENCE_ABSENT_ON_SOURCE, null, targetSequence.getName()));
+            diffCollector.add(
+                    CompareKind.SEQUENCE_ABSENT_ON_SOURCE,
+                    null,
+                    targetSequence.getName(),
+                    dialect -> dialect.dropSequenceQuery(targetSequence));
             return;
         }
         if (!Objects.equals(sourceSequence.getName(), targetSequence.getName())) {
-            diffs.add(new CompareDiff(CompareKind.SEQUENCE_NAME, sourceSequence.getName(), targetSequence.getName()));
+            diffCollector.add(
+                    CompareKind.SEQUENCE_NAME,
+                    sourceSequence.getName(),
+                    targetSequence.getName(),
+                    // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
+                    dialect -> dialect.dropSequenceQuery(targetSequence) + "\n" + dialect.createSequenceQuery(sourceSequence));
+        }
+    }
+
+    private static class DiffCollector {
+        private final List<CompareDiff> diffs;
+        private final Schema target;
+
+        private DiffCollector(Schema target) {
+            this.diffs = new LinkedList<>();
+            this.target = target;
+        }
+
+        private void add(CompareKind kind, String sourceValue, String targetValue, Function<Dialect, String> alterFunction) {
+            CompareDiff compareDiff = new CompareDiff();
+            compareDiff.setKind(kind);
+            compareDiff.setSourceValue(sourceValue);
+            compareDiff.setTargetValue(targetValue);
+            compareDiff.setAlter(alterFunction.apply(target.getDialect()));
+            this.diffs.add(compareDiff);
         }
     }
 }

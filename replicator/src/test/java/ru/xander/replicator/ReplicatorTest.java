@@ -53,9 +53,10 @@ public class ReplicatorTest {
             System.out.println("Equals");
         } else {
             compareResult.getDiffs().forEach(diff ->
-                    System.out.println(diff.getKind() + ": "
+                    System.out.println("\n" + diff.getKind() + ": "
                             + '\'' + diff.getSourceValue() + "', "
-                            + '\'' + diff.getTargetValue() + '\''));
+                            + '\'' + diff.getTargetValue() + "'\n"
+                            + diff.getAlter()));
         }
     }
 }

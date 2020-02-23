@@ -12,7 +12,7 @@ public interface Dialect {
 
     String createColumnQuery(Column column);
 
-    String modifyColumnQuery(Column column, ColumnDiff[] columnDiffs);
+    String modifyColumnQuery(Column column, ColumnDiff... columnDiffs);
 
     String dropColumnQuery(Column column);
 
@@ -27,6 +27,8 @@ public interface Dialect {
     String dropConstraintQuery(Constraint constraint);
 
     String toggleConstraintQuery(Constraint constraint, boolean enabled);
+
+    String renameConstraintQuery(Constraint constraint, String newConstraintName);
 
     String createIndexQuery(Index index);
 
