@@ -72,6 +72,6 @@ public class TestListener implements Listener {
     }
 
     private void printPrefix() {
-        System.out.print(dateFormat.format(new Date(System.currentTimeMillis())) + " <" + name + "> ");
+        System.out.print(dateFormat.format(new Date(System.currentTimeMillis())) + " <" + name + "> [" + Thread.currentThread().getName() + "]");
     }
 }

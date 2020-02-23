@@ -18,6 +18,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 /**
@@ -25,6 +29,7 @@ import java.util.stream.Collectors;
  */
 public class ReplicateAction implements Action {
 
+    private final ExecutorService executorService;
     private final SchemaConfig sourceConfig;
     private final SchemaConfig targetConfig;
     private final boolean updateImported;
@@ -41,6 +46,7 @@ public class ReplicateAction implements Action {
         this.targetConfig = targetConfig;
         this.updateImported = updateImported;
         this.tables = tables;
+        this.executorService = Executors.newFixedThreadPool(2);
     }
 
     public void execute() {
@@ -66,12 +72,21 @@ public class ReplicateAction implements Action {
 
         createdTables.add(tableName);
 
-        Table sourceTable = source.getTable(tableName);
+        Future<Table> sourceTableFuture = executorService.submit(() -> source.getTable(tableName));
+        Future<Table> targetTableFuture = executorService.submit(() -> target.getTable(tableName));
+
+        Table sourceTable;
+        Table targetTable;
+        try {
+            sourceTable = sourceTableFuture.get();
+            targetTable = targetTableFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Interrupter get table task: " + e.getMessage());
+        }
+
         if (sourceTable == null) {
             throw new ReplicatorException("Table " + tableName + " not found on source");
         }
-
-        Table targetTable = target.getTable(tableName);
 
         // зависимости реплицируем только если это требуется опцией updateImported
         // либо если этой таблицы ещё нет в схеме.

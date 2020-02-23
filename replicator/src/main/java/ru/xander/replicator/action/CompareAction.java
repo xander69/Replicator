@@ -24,6 +24,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.Function;
 
 /**
@@ -31,6 +35,7 @@ import java.util.function.Function;
  */
 public class CompareAction implements Action {
 
+    private final ExecutorService executorService;
     private final SchemaConfig sourceConfig;
     private final SchemaConfig targetConfig;
     private final String[] tables;
@@ -45,6 +50,7 @@ public class CompareAction implements Action {
         this.sourceConfig = sourceConfig;
         this.targetConfig = targetConfig;
         this.tables = tables;
+        this.executorService = Executors.newFixedThreadPool(2);
     }
 
     public Map<String, CompareResult> execute() {
@@ -62,11 +68,21 @@ public class CompareAction implements Action {
     }
 
     private CompareResult compareTable(String tableName, Schema source, Schema target) {
-        Table sourceTable = source.getTable(tableName);
+        Future<Table> sourceTableFuture = executorService.submit(() -> source.getTable(tableName));
+        Future<Table> targetTableFuture = executorService.submit(() -> target.getTable(tableName));
+
+        Table sourceTable;
+        Table targetTable;
+        try {
+            sourceTable = sourceTableFuture.get();
+            targetTable = targetTableFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Interrupter get table task: " + e.getMessage());
+        }
+
         if (sourceTable == null) {
             return new CompareResult(CompareResultType.ABSENT_ON_SOURCE, Collections.emptyList());
         }
-        Table targetTable = target.getTable(tableName);
         if (targetTable == null) {
             return new CompareResult(CompareResultType.ABSENT_ON_TARGET, Collections.emptyList());
         }
