@@ -117,12 +117,11 @@ public class DumpActionConfigurer implements ActionConfigurer<DumpAction> {
     @Override
     public DumpAction configure() {
         DumpOptions options = new DumpOptions();
-        options.setOutputStream(outputStream);
         options.setDumpDdl(dumpDdl);
         options.setDumpDml(dumpDml);
         options.setCharset(charset);
         options.setVerboseEach(verboseEach);
         options.setCommitEach(commitEach);
-        return new DumpAction(schemaConfig, dumpType, options, tableName);
+        return new DumpAction(schemaConfig, dumpType, outputStream, options, tableName);
     }
 }

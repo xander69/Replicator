@@ -23,37 +23,25 @@ public class SqlTableSerializer implements TableSerializer {
 
     private final Schema schema;
     private final Dialect dialect;
+    private final DumpOptions options;
+    private final Charset charset;
 
-    public SqlTableSerializer(Schema schema) {
+    public SqlTableSerializer(Schema schema, DumpOptions options) {
         this.schema = schema;
         this.dialect = schema.getDialect();
+        this.options = options;
+        this.charset = options.getCharset() == null ? DumpActionConfigurer.DEFAULT_CHARSET : options.getCharset();
     }
 
     @Override
-    public void serialize(Table table, DumpOptions options) throws IOException {
-        OutputStream output = options.getOutputStream();
-        Charset charset = options.getCharset() == null ? DumpActionConfigurer.DEFAULT_CHARSET : options.getCharset();
-        if (options.isDumpDdl()) {
-            writeTable(table, output, charset);
-            if (options.isDumpDml()) {
-                output.write('\n');
-                dumpTableDml(table, output, options);
-            }
-            writeTableObjects(table, output, charset);
-            dumpAnalyze(table, output, charset);
-        } else if (options.isDumpDml()) {
-            dumpTableDml(table, output, options);
-            dumpAnalyze(table, output, charset);
-        }
-    }
-
-    private void writeTable(Table table, OutputStream output, Charset charset) throws IOException {
+    public void serializeTable(Table table, OutputStream output) throws IOException {
         output.write(dialect.createTableQuery(table).getBytes(charset));
         output.write(';');
         output.write('\n');
     }
 
-    private void writeTableObjects(Table table, OutputStream output, Charset charset) throws IOException {
+    @Override
+    public void serializeTableObjects(Table table, OutputStream output) throws IOException {
         if (table.getPrimaryKey() != null) {
             output.write('\n');
             output.write(dialect.createPrimaryKeyQuery(table.getPrimaryKey()).getBytes(charset));
@@ -71,6 +59,7 @@ public class SqlTableSerializer implements TableSerializer {
         if (!table.getCheckConstraints().isEmpty()) {
             output.write('\n');
             for (CheckConstraint checkConstraint : table.getCheckConstraints()) {
+                //TODO: для Oracle не надо сериализовать чек-констрейнты, т.к. они создаются вместе со столбцами
                 String checkConstraintQuery = dialect.createCheckConstraintQuery(checkConstraint);
                 if (!StringUtils.isEmpty(checkConstraintQuery)) {
                     output.write(checkConstraintQuery.getBytes(charset));
@@ -102,13 +91,8 @@ public class SqlTableSerializer implements TableSerializer {
         }
     }
 
-    private void dumpAnalyze(Table table, OutputStream output, Charset charset) throws IOException {
-        output.write('\n');
-        output.write(dialect.analyzeTableQuery(table).getBytes(charset));
-        output.write('\n');
-    }
-
-    private void dumpTableDml(Table table, OutputStream output, DumpOptions options) throws IOException {
+    @Override
+    public void serializeRows(Table table, OutputStream output) throws IOException {
         try (TableRowExtractor rowExtractor = schema.getRows(table)) {
             rowExtractor.setVerboseEach(options.getVerboseEach());
 
@@ -137,5 +121,12 @@ public class SqlTableSerializer implements TableSerializer {
                 output.write('\n');
             }
         }
+    }
+
+    @Override
+    public void serializeAnalyze(Table table, OutputStream output) throws IOException {
+        output.write('\n');
+        output.write(dialect.analyzeTableQuery(table).getBytes(charset));
+        output.write('\n');
     }
 }
