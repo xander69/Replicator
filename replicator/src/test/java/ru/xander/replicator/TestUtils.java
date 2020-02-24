@@ -67,6 +67,12 @@ public final class TestUtils {
                         + r.getName() + " (" + r.getColumnName() + ") " + r.getEnabled()));
         System.out.println();
 
+        table.getCheckConstraints().forEach(r ->
+                System.out.println(r.getName()
+                        + " (" + r.getColumnName() + ')'
+                        + " condition = '" + r.getCondition() + '\''));
+        System.out.println();
+
         table.getIndices().forEach(i ->
                 System.out.println(i.getName()
                         + " " + i.getType()

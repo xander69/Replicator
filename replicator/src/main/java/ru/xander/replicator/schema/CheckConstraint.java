@@ -3,7 +3,6 @@ package ru.xander.replicator.schema;
 /**
  * @author Alexander Shakhov
  */
-@Deprecated
 public class CheckConstraint extends Constraint {
 
     private String condition;

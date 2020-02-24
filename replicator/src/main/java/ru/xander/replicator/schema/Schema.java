@@ -37,6 +37,8 @@ public interface Schema {
 
     void createImportedKey(ImportedKey importedKey);
 
+    void createCheckConstraint(CheckConstraint checkConstraint);
+
     void dropConstraint(Constraint constraint);
 
     void toggleConstraint(Constraint constraint, boolean enabled);

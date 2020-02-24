@@ -3,6 +3,7 @@ package ru.xander.replicator.schema.oracle;
 import ru.xander.replicator.exception.SchemaException;
 import ru.xander.replicator.filter.Filter;
 import ru.xander.replicator.filter.FilterType;
+import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnDiff;
 import ru.xander.replicator.schema.ColumnType;
@@ -71,8 +72,8 @@ class OracleDialect implements Dialect {
                 "    T.OWNER = TC.OWNER\n" +
                 "    AND T.TABLE_NAME = TC.TABLE_NAME\n" +
                 "WHERE\n" +
-                "  T.OWNER = '" + workSchema + "'\n" +
-                "  AND T.TABLE_NAME = '" + tableName + '\'';
+                "  T.OWNER = UPPER('" + workSchema + "')\n" +
+                "  AND T.TABLE_NAME = UPPER('" + tableName + ")'";
     }
 
     String selectColumnsQuery(Table table) {
@@ -95,8 +96,8 @@ class OracleDialect implements Dialect {
                 "    AND C.TABLE_NAME = CC.TABLE_NAME\n" +
                 "    AND C.COLUMN_NAME = CC.COLUMN_NAME\n" +
                 "WHERE\n" +
-                "  C.OWNER = '" + workSchema + "'\n" +
-                "  AND C.TABLE_NAME = '" + table.getName() + "'\n" +
+                "  C.OWNER = UPPER('" + workSchema + "')\n" +
+                "  AND C.TABLE_NAME = UPPER('" + table.getName() + "')\n" +
                 "ORDER BY C.COLUMN_ID";
     }
 
@@ -126,8 +127,8 @@ class OracleDialect implements Dialect {
                 "    AND CR.TABLE_NAME = CCR.TABLE_NAME\n" +
                 "    AND CR.CONSTRAINT_NAME = CCR.CONSTRAINT_NAME\n" +
                 "WHERE C.CONSTRAINT_TYPE IN ('P', 'R', 'C')\n" +
-                "      AND C.OWNER = '" + workSchema + "'\n" +
-                "      AND C.TABLE_NAME = '" + table.getName() + "'\n" +
+                "      AND C.OWNER = UPPER('" + workSchema + "')\n" +
+                "      AND C.TABLE_NAME = UPPER('" + table.getName() + "')\n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
                 "  C.OWNER,\n" +
@@ -153,8 +154,8 @@ class OracleDialect implements Dialect {
                 "    CR.OWNER = CCR.OWNER\n" +
                 "    AND CR.TABLE_NAME = CCR.TABLE_NAME\n" +
                 "    AND CR.CONSTRAINT_NAME = CCR.CONSTRAINT_NAME\n" +
-                "WHERE CR.OWNER = '" + workSchema + "'\n" +
-                "      AND CR.TABLE_NAME = '" + table.getName() + '\'';
+                "WHERE CR.OWNER = UPPER('" + workSchema + "')\n" +
+                "      AND CR.TABLE_NAME = UPPER('" + table.getName() + ")\'";
     }
 
     String selectIndicesQuery(Table table) {
@@ -172,16 +173,16 @@ class OracleDialect implements Dialect {
                 "    I.OWNER = IC.INDEX_OWNER\n" +
                 "    AND I.INDEX_NAME = IC.INDEX_NAME\n" +
                 "WHERE\n" +
-                "  I.TABLE_OWNER = '" + workSchema + "'\n" +
-                "  AND I.TABLE_NAME = '" + table.getName() + "'\n" +
+                "  I.TABLE_OWNER = UPPER('" + workSchema + "')\n" +
+                "  AND I.TABLE_NAME = UPPER('" + table.getName() + "')\n" +
                 "  AND (/*I.OWNER, */I.INDEX_NAME) NOT IN\n" +
                 "      (\n" +
                 "        SELECT DISTINCT\n" +
                 "          /*C.INDEX_OWNER,*/\n" +
                 "          C.INDEX_NAME\n" +
                 "        FROM SYS.ALL_CONSTRAINTS C\n" +
-                "        WHERE C.OWNER = '" + workSchema + "'\n" +
-                "              AND C.TABLE_NAME = '" + table.getName() + "'\n" +
+                "        WHERE C.OWNER = UPPER('" + workSchema + "')\n" +
+                "              AND C.TABLE_NAME = UPPER('" + table.getName() + "')\n" +
                 "              /*AND C.INDEX_OWNER IS NOT NULL\n*/" +
                 "              AND C.INDEX_NAME IS NOT NULL\n" +
                 "      )\n" +
@@ -205,8 +206,8 @@ class OracleDialect implements Dialect {
                 "  T.TRIGGER_BODY,\n" +
                 "  T.STATUS\n" +
                 "FROM SYS.ALL_TRIGGERS T\n" +
-                "WHERE T.TABLE_OWNER = '" + workSchema + "'\n" +
-                "      AND T.TABLE_NAME = '" + table.getName() + "'";
+                "WHERE T.TABLE_OWNER = UPPER('" + workSchema + "')\n" +
+                "      AND T.TABLE_NAME = UPPER('" + table.getName() + "')";
     }
 
     String selectTriggerDependenciesQuery(Trigger trigger) {
@@ -215,9 +216,9 @@ class OracleDialect implements Dialect {
                 "       D.REFERENCED_TYPE\n" +
                 "FROM SYS.ALL_TRIGGERS T\n" +
                 "  INNER JOIN SYS.ALL_DEPENDENCIES D ON\n" +
-                "    T.TABLE_OWNER = '" + workSchema + "'\n" +
-                "    AND T.TABLE_NAME = '" + trigger.getTable().getName() + "'\n" +
-                "    AND T.TRIGGER_NAME = '" + trigger.getName() + "'\n" +
+                "    T.TABLE_OWNER = UPPER('" + workSchema + "')\n" +
+                "    AND T.TABLE_NAME = UPPER('" + trigger.getTable().getName() + "')\n" +
+                "    AND T.TRIGGER_NAME = UPPER('" + trigger.getName() + "')\n" +
                 "    AND D.OWNER = T.OWNER\n" +
                 "    AND D.NAME = T.TRIGGER_NAME\n" +
                 "    AND D.REFERENCED_TYPE <> 'PACKAGE'";
@@ -234,8 +235,8 @@ class OracleDialect implements Dialect {
                 "  S.CACHE_SIZE\n" +
                 "FROM SYS.ALL_TRIGGERS T\n" +
                 "  INNER JOIN SYS.ALL_DEPENDENCIES D ON\n" +
-                "    T.TABLE_OWNER = '" + workSchema + "'\n" +
-                "    AND T.TABLE_NAME = '" + table.getName() + "'\n" +
+                "    T.TABLE_OWNER = UPPER('" + workSchema + "')\n" +
+                "    AND T.TABLE_NAME = UPPER('" + table.getName() + "')\n" +
                 "    AND D.OWNER = T.OWNER\n" +
                 "    AND D.NAME = T.TRIGGER_NAME\n" +
                 "    AND D.REFERENCED_TYPE = 'SEQUENCE'\n" +
@@ -283,7 +284,15 @@ class OracleDialect implements Dialect {
             modify.append("DEFAULT ").append(column.getDefaultValue());
         }
         if (ColumnDiff.MANDATORY.anyOf(columnDiffs)) {
-            modify.append(column.isNullable() ? "NULL " : "NOT NULL ");
+            if (column.isNullable()) {
+                modify.append("NULL ");
+            } else {
+                CheckConstraint checkConstraint = column.getTable().getCheckConstraintByColumn(column.getName());
+                if (checkConstraint != null) {
+                    modify.append(" CONSTRAINT ").append(checkConstraint.getName()).append(' ');
+                }
+                modify.append("NOT NULL ");
+            }
         }
         if (modify.length() == 0) {
             return null;
@@ -326,11 +335,12 @@ class OracleDialect implements Dialect {
                 + " (" + importedKey.getPkColumnName() + ')';
     }
 
-//    String createCheckConstraintQuery(CheckConstraint checkConstraint) {
-//        return "ALTER TABLE " + getQualifiedName(checkConstraint.getTable())
-//                + " ADD CONSTRAINT " + checkConstraint.getName()
-//                + " CHECK (" + checkConstraint.getCondition() + ')';
-//    }
+    @Override
+    public String createCheckConstraintQuery(CheckConstraint checkConstraint) {
+        return "ALTER TABLE " + getQualifiedName(checkConstraint.getTable())
+                + " ADD CONSTRAINT " + checkConstraint.getName()
+                + " CHECK (" + checkConstraint.getCondition() + ')';
+    }
 
     @Override
     public String dropConstraintQuery(Constraint constraint) {
@@ -522,6 +532,10 @@ class OracleDialect implements Dialect {
             definition.append(" DEFAULT ").append(column.getDefaultValue().trim());
         }
         if (!column.isNullable()) {
+            CheckConstraint checkConstraint = column.getTable().getCheckConstraintByColumn(column.getName());
+            if (checkConstraint != null) {
+                definition.append(" CONSTRAINT ").append(checkConstraint.getName());
+            }
             definition.append(" NOT NULL");
         }
         return definition.toString();

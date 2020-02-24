@@ -5,6 +5,7 @@ import ru.xander.replicator.filter.Filter;
 import ru.xander.replicator.listener.AlterType;
 import ru.xander.replicator.listener.Listener;
 import ru.xander.replicator.schema.AbstractSchema;
+import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnDiff;
 import ru.xander.replicator.schema.ColumnType;
@@ -148,6 +149,12 @@ public class OracleSchema extends AbstractSchema {
     }
 
     @Override
+    public void createCheckConstraint(CheckConstraint checkConstraint) {
+        // do nothing
+        // чек-констрейнт будет создаваться вместе со столбцом
+    }
+
+    @Override
     public void dropConstraint(Constraint constraint) {
         String sql = dialect.dropConstraintQuery(constraint);
         alter(DROP_CONSTRAINT, constraint.getTable().getName(), constraint.getName(), sql);
@@ -244,6 +251,8 @@ public class OracleSchema extends AbstractSchema {
             ddl.addConstraints(dialect.createPrimaryKeyQuery(table.getPrimaryKey()));
         }
         table.getImportedKeys().forEach(importedKey -> ddl.addConstraints(dialect.createImportedKeyQuery(importedKey)));
+        // чек-констрейнты будут создаваться вместе со столбцами
+//        table.getCheckConstraints().forEach(checkConstraint -> ddl.addConstraints(dialect.createCheckConstraintQuery(checkConstraint)));
         table.getIndices().forEach(index -> ddl.addIndex(dialect.createIndexQuery(index)));
         table.getTriggers().forEach(trigger -> ddl.addTrigger(dialect.createTriggerQuery(trigger)));
         if (table.getSequence() != null) {
@@ -337,8 +346,8 @@ public class OracleSchema extends AbstractSchema {
                     PrimaryKey primaryKey = new PrimaryKey();
                     primaryKey.setTable(table);
                     primaryKey.setName(rs.getString("constraint_name"));
-                    primaryKey.setEnabled("ENABLED".equals(rs.getString("status")));
                     primaryKey.setColumnName(rs.getString("column_name"));
+                    primaryKey.setEnabled("ENABLED".equals(rs.getString("status")));
                     table.setPrimaryKey(primaryKey);
                     break;
                 case "R":
@@ -352,6 +361,15 @@ public class OracleSchema extends AbstractSchema {
                     importedKey.setPkName(rs.getString("r_constraint_name"));
                     importedKey.setPkColumnName(rs.getString("r_column_name"));
                     table.addImportedKey(importedKey);
+                    break;
+                case "C":
+                    CheckConstraint checkConstraint = new CheckConstraint();
+                    checkConstraint.setTable(table);
+                    checkConstraint.setName(rs.getString("constraint_name"));
+                    checkConstraint.setColumnName(rs.getString("column_name"));
+                    checkConstraint.setEnabled("ENABLED".equals(rs.getString("status")));
+                    checkConstraint.setCondition(rs.getString("search_condition"));
+                    table.addCheckConstraint(checkConstraint);
                     break;
                 case "D":
                     ExportedKey exportedKey = new ExportedKey();

@@ -26,6 +26,8 @@ public interface Dialect {
 
     String createImportedKeyQuery(ImportedKey importedKey);
 
+    String createCheckConstraintQuery(CheckConstraint checkConstraint);
+
     String dropConstraintQuery(Constraint constraint);
 
     String toggleConstraintQuery(Constraint constraint, boolean enabled);

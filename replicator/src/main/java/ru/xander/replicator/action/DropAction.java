@@ -69,6 +69,7 @@ public class DropAction implements Action {
             schema.dropPrimaryKey(primaryKey);
         }
         table.getImportedKeys().forEach(schema::dropConstraint);
+        table.getCheckConstraints().forEach(schema::dropConstraint);
         table.getIndices().forEach(schema::dropIndex);
         table.getTriggers().forEach(schema::dropTrigger);
         Sequence sequence = table.getSequence();

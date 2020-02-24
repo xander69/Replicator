@@ -18,6 +18,7 @@ public class Table {
     private PrimaryKey primaryKey;
     private Map<String, ImportedKey> importedKeyMap;
     private Map<String, ExportedKey> exportedKeyMap;
+    private Map<String, CheckConstraint> checkConstraintMap;
     private Map<String, Index> indexMap;
     private Map<String, Trigger> triggerMap;
     private Sequence sequence;
@@ -172,6 +173,52 @@ public class Table {
             return;
         }
         exportedKeyMap.remove(exportedKey.getName());
+    }
+
+    public Map<String, CheckConstraint> getCheckConstraintMap() {
+        if (checkConstraintMap == null) {
+            return Collections.emptyMap();
+        }
+        return checkConstraintMap;
+    }
+
+    public Collection<CheckConstraint> getCheckConstraints() {
+        if (checkConstraintMap == null) {
+            return Collections.emptyList();
+        }
+        return checkConstraintMap.values();
+    }
+
+    public CheckConstraint getCheckConstraint(String constraintName) {
+        if (checkConstraintMap == null) {
+            return null;
+        }
+        return checkConstraintMap.get(constraintName);
+    }
+
+    public CheckConstraint getCheckConstraintByColumn(String columnName) {
+        if (checkConstraintMap == null) {
+            return null;
+        }
+        return checkConstraintMap.values()
+                .stream()
+                .filter(c -> c.getColumnName().equalsIgnoreCase(columnName))
+                .findFirst()
+                .orElse(null);
+    }
+
+    public void addCheckConstraint(CheckConstraint checkConstraint) {
+        if (checkConstraintMap == null) {
+            checkConstraintMap = new LinkedHashMap<>();
+        }
+        checkConstraintMap.put(checkConstraint.getName(), checkConstraint);
+    }
+
+    public void removeCheckConstraint(CheckConstraint checkConstraint) {
+        if (checkConstraintMap == null) {
+            return;
+        }
+        checkConstraintMap.remove(checkConstraint.getName());
     }
 
     public Map<String, Index> getIndexMap() {

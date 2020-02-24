@@ -1,6 +1,7 @@
 package ru.xander.replicator.action;
 
 import ru.xander.replicator.exception.ReplicatorException;
+import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
@@ -117,6 +118,7 @@ public class ReplicateAction implements Action {
             target.createPrimaryKey(primaryKey);
         }
         table.getImportedKeys().forEach(target::createImportedKey);
+        table.getCheckConstraints().forEach(target::createCheckConstraint);
         table.getIndices().forEach(target::createIndex);
         Sequence sequence = table.getSequence();
         if (sequence != null) {
@@ -133,6 +135,7 @@ public class ReplicateAction implements Action {
         updateColumns(target, targetTable, sourceTable);
         updatePrimaryKey(target, targetTable, sourceTable);
         updateImportedKeys(target, targetTable, sourceTable);
+        updateCheckConstraints(target, targetTable, sourceTable);
         updateIndices(target, targetTable, sourceTable);
         updateComments(target, targetTable, sourceTable);
         updateSequence(target, targetTable, sourceTable);
@@ -201,6 +204,25 @@ public class ReplicateAction implements Action {
             if (!targetImportedKeys.containsKey(importedKeyName)) {
                 target.createImportedKey(sourceImportedKey);
                 targetTable.addImportedKey(sourceImportedKey);
+            }
+        });
+    }
+
+    private void updateCheckConstraints(Schema target, Table targetTable, Table sourceTable) {
+        Map<String, CheckConstraint> sourceCheckConstraints = sourceTable.getCheckConstraintMap();
+        Map<String, CheckConstraint> targetCheckConstraints = targetTable.getCheckConstraintMap();
+
+        List<CheckConstraint> checkConstraintsToDrop = targetCheckConstraints.values().stream()
+                .filter(checkConstraint -> !sourceCheckConstraints.containsKey(checkConstraint.getName()))
+                .collect(Collectors.toList());
+
+        checkConstraintsToDrop.forEach(target::dropConstraint);
+        checkConstraintsToDrop.forEach(targetTable::removeCheckConstraint);
+
+        sourceCheckConstraints.forEach((constraintName, sourceCheckConstraint) -> {
+            if (!targetCheckConstraints.containsKey(constraintName)) {
+                target.createCheckConstraint(sourceCheckConstraint);
+                targetTable.addCheckConstraint(sourceCheckConstraint);
             }
         });
     }

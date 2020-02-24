@@ -4,6 +4,7 @@ import ru.xander.replicator.compare.CompareDiff;
 import ru.xander.replicator.compare.CompareKind;
 import ru.xander.replicator.compare.CompareResult;
 import ru.xander.replicator.compare.CompareResultType;
+import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnDiff;
 import ru.xander.replicator.schema.Dialect;
@@ -91,6 +92,7 @@ public class CompareAction implements Action {
         compareColumns(sourceTable, targetTable, diffCollector);
         comparePrimaryKey(sourceTable, targetTable, diffCollector);
         compareImportedKeys(sourceTable, targetTable, diffCollector);
+        compareCheckConstraints(sourceTable, targetTable, diffCollector);
         compareIndexes(sourceTable, targetTable, diffCollector);
         compareTriggers(sourceTable, targetTable, diffCollector);
         compareSequence(sourceTable, targetTable, diffCollector);
@@ -268,6 +270,39 @@ public class CompareAction implements Action {
                         null,
                         importedKeyName,
                         dialect -> dialect.dropConstraintQuery(targetImportedKey));
+            }
+        });
+    }
+
+    private void compareCheckConstraints(Table sourceTable, Table targetTable, DiffCollector diffCollector) {
+        Map<String, CheckConstraint> sourceCheckConstraints = sourceTable.getCheckConstraintMap();
+        Map<String, CheckConstraint> targetCheckConstraints = targetTable.getCheckConstraintMap();
+        sourceCheckConstraints.forEach((checkConstraintName, sourceCheckConstraint) -> {
+            CheckConstraint targetCheckConstraint = targetCheckConstraints.get(checkConstraintName);
+            if (targetCheckConstraint == null) {
+                diffCollector.add(
+                        CompareKind.CHECK_CONSTRAINT_ABSENT_ON_TARGET,
+                        checkConstraintName,
+                        null,
+                        dialect -> dialect.createCheckConstraintQuery(sourceCheckConstraint));
+            } else {
+                if (!Objects.equals(sourceCheckConstraint.getCondition(), targetCheckConstraint.getCondition())) {
+                    diffCollector.add(
+                            CompareKind.CHECK_CONSTRAINT_CONDITION,
+                            sourceCheckConstraint.getColumnName(),
+                            targetCheckConstraint.getColumnName(),
+                            // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
+                            dialect -> dialect.dropConstraintQuery(targetCheckConstraint) + "\n" + dialect.createCheckConstraintQuery(sourceCheckConstraint));
+                }
+            }
+        });
+        targetCheckConstraints.forEach((checkConstraintName, targetCheckConstraint) -> {
+            if (!sourceCheckConstraints.containsKey(checkConstraintName)) {
+                diffCollector.add(
+                        CompareKind.CHECK_CONSTRAINT_ABSENT_ON_SOURCE,
+                        null,
+                        checkConstraintName,
+                        dialect -> dialect.dropConstraintQuery(targetCheckConstraint));
             }
         });
     }
