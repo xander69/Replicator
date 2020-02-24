@@ -1,5 +1,6 @@
 package ru.xander.replicator.action;
 
+import ru.xander.replicator.dump.DumpOptions;
 import ru.xander.replicator.schema.SchemaConfig;
 
 import java.io.OutputStream;
@@ -98,6 +99,12 @@ public class DumpActionConfigurer implements ActionConfigurer<DumpAction> {
 
     @Override
     public DumpAction configure() {
-        return new DumpAction(schemaConfig, outputStream, dumpDdl, dumpDml, charset, verboseEach, commitEach, tableName);
+        DumpOptions options = new DumpOptions();
+        options.setDumpDdl(dumpDdl);
+        options.setDumpDml(dumpDml);
+        options.setCharset(charset);
+        options.setVerboseEach(verboseEach);
+        options.setCommitEach(commitEach);
+        return new DumpAction(schemaConfig, outputStream, options, tableName);
     }
 }

@@ -73,7 +73,7 @@ class OracleDialect implements Dialect {
                 "    AND T.TABLE_NAME = TC.TABLE_NAME\n" +
                 "WHERE\n" +
                 "  T.OWNER = UPPER('" + workSchema + "')\n" +
-                "  AND T.TABLE_NAME = UPPER('" + tableName + ")'";
+                "  AND T.TABLE_NAME = UPPER('" + tableName + "')";
     }
 
     String selectColumnsQuery(Table table) {
@@ -155,7 +155,7 @@ class OracleDialect implements Dialect {
                 "    AND CR.TABLE_NAME = CCR.TABLE_NAME\n" +
                 "    AND CR.CONSTRAINT_NAME = CCR.CONSTRAINT_NAME\n" +
                 "WHERE CR.OWNER = UPPER('" + workSchema + "')\n" +
-                "      AND CR.TABLE_NAME = UPPER('" + table.getName() + ")\'";
+                "      AND CR.TABLE_NAME = UPPER('" + table.getName() + "')";
     }
 
     String selectIndicesQuery(Table table) {

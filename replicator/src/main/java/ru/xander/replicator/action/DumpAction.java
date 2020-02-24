@@ -1,5 +1,6 @@
 package ru.xander.replicator.action;
 
+import ru.xander.replicator.dump.DumpOptions;
 import ru.xander.replicator.exception.ReplicatorException;
 import ru.xander.replicator.listener.Listener;
 import ru.xander.replicator.listener.Progress;
@@ -13,7 +14,6 @@ import ru.xander.replicator.schema.Table;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.Objects;
 
@@ -24,24 +24,17 @@ public class DumpAction implements Action {
 
     private final SchemaConfig schemaConfig;
     private final OutputStream output;
-    private final boolean dumpDdl;
-    private final boolean dumpDml;
-    private final Charset charset;
-    private final long verboseEach;
-    private final long commitEach;
+    private final DumpOptions options;
     private final String tableName;
 
-    public DumpAction(SchemaConfig schemaConfig, OutputStream output, boolean dumpDdl, boolean dumpDml, Charset charset, long verboseEach, long commitEach, String tableName) {
+    public DumpAction(SchemaConfig schemaConfig, OutputStream output, DumpOptions options, String tableName) {
         Objects.requireNonNull(schemaConfig, "Configure schema");
         Objects.requireNonNull(output, "Output stream");
+        Objects.requireNonNull(options, "Options");
         Objects.requireNonNull(tableName, "Table name for dump");
         this.schemaConfig = schemaConfig;
         this.output = output;
-        this.dumpDdl = dumpDdl;
-        this.dumpDml = dumpDml;
-        this.charset = charset;
-        this.verboseEach = verboseEach;
-        this.commitEach = commitEach;
+        this.options = options;
         this.tableName = tableName;
     }
 
@@ -58,15 +51,15 @@ public class DumpAction implements Action {
         }
         try {
             Ddl ddl = schema.getDdl(table);
-            if (dumpDdl) {
+            if (options.isDumpDdl()) {
                 dumpTableDdl(ddl);
-                if (dumpDml) {
+                if (options.isDumpDml()) {
                     output.write('\n');
                     dumpTableDml(schema, table);
                 }
                 dumpTableObjectsDdl(ddl);
                 dumpAnalyze(ddl);
-            } else if (dumpDml) {
+            } else if (options.isDumpDml()) {
                 dumpTableDml(schema, table);
                 dumpAnalyze(ddl);
             }
@@ -77,7 +70,7 @@ public class DumpAction implements Action {
     }
 
     private void dumpTableDdl(Ddl ddl) throws IOException {
-        output.write(ddl.getTable().getBytes(charset));
+        output.write(ddl.getTable().getBytes(options.getCharset()));
         output.write(';');
         output.write('\n');
     }
@@ -86,7 +79,7 @@ public class DumpAction implements Action {
         if (!ddl.getConstraints().isEmpty()) {
             output.write('\n');
             for (String constraint : ddl.getConstraints()) {
-                output.write(constraint.getBytes(charset));
+                output.write(constraint.getBytes(options.getCharset()));
                 output.write(';');
                 output.write('\n');
             }
@@ -94,21 +87,21 @@ public class DumpAction implements Action {
         if (!ddl.getIndices().isEmpty()) {
             output.write('\n');
             for (String index : ddl.getIndices()) {
-                output.write(index.getBytes(charset));
+                output.write(index.getBytes(options.getCharset()));
                 output.write(';');
                 output.write('\n');
             }
         }
         if (ddl.getSequence() != null) {
             output.write('\n');
-            output.write(ddl.getSequence().getBytes(charset));
+            output.write(ddl.getSequence().getBytes(options.getCharset()));
             output.write(';');
             output.write('\n');
         }
         if (!ddl.getTriggers().isEmpty()) {
             output.write('\n');
             for (String trigger : ddl.getTriggers()) {
-                output.write(trigger.getBytes(charset));
+                output.write(trigger.getBytes(options.getCharset()));
                 output.write('\n');
             }
         }
@@ -116,12 +109,14 @@ public class DumpAction implements Action {
 
     private void dumpAnalyze(Ddl ddl) throws IOException {
         output.write('\n');
-        output.write(ddl.getAnalyze().getBytes(charset));
+        output.write(ddl.getAnalyze().getBytes(options.getCharset()));
         output.write('\n');
     }
 
     private void dumpTableDml(Schema schema, Table table) throws IOException {
         try (Dml dml = schema.getDml(table)) {
+            final long commitEach = options.getCommitEach();
+            final long verboseEach = options.getVerboseEach();
             final Dialect dialect = schema.getDialect();
             long totalRows = dml.getTotalRows();
             long currentRow = 0;
@@ -129,13 +124,13 @@ public class DumpAction implements Action {
             Map<String, Object> row;
             while ((row = dml.nextRow()) != null) {
                 String insertQuery = dialect.insertQuery(table, row);
-                output.write(insertQuery.getBytes(charset));
+                output.write(insertQuery.getBytes(options.getCharset()));
                 output.write(';');
                 output.write('\n');
 
                 currentRow++;
                 if ((commitEach > 0) && ((currentRow % commitEach) == 0)) {
-                    output.write(dialect.commitQuery().getBytes(charset));
+                    output.write(dialect.commitQuery().getBytes(options.getCharset()));
                     output.write(';');
                     output.write('\n');
                 }
@@ -146,7 +141,7 @@ public class DumpAction implements Action {
             }
 
             if ((commitEach == 0) || ((currentRow % commitEach) != 0)) {
-                output.write(dialect.commitQuery().getBytes(charset));
+                output.write(dialect.commitQuery().getBytes(options.getCharset()));
                 output.write(';');
                 output.write('\n');
             }
