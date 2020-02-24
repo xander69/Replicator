@@ -55,7 +55,7 @@ public class StdOutListener implements Listener {
         }
         message += RESET;
         if (event.getSql() != null) {
-            message += BRIGHT_BLACK + event.getSql() + RESET;
+            message += "\n" + BRIGHT_BLACK + event.getSql() + RESET;
         }
         printMessage(message);
     }

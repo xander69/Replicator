@@ -118,13 +118,13 @@ public class ReplicateAction implements Action {
         }
         table.getImportedKeys().forEach(target::createImportedKey);
         table.getIndices().forEach(target::createIndex);
-        // Триггеры создаем только на идентичных схемах
-        if (table.getVendorType() == target.getVendorType()) {
-            table.getTriggers().forEach(target::createTrigger);
-        }
         Sequence sequence = table.getSequence();
         if (sequence != null) {
             target.createSequence(sequence);
+        }
+        // Триггеры создаем только на идентичных схемах
+        if (table.getVendorType() == target.getVendorType()) {
+            table.getTriggers().forEach(target::createTrigger);
         }
         target.analyzeTable(table);
     }
