@@ -1,6 +1,8 @@
 package ru.xander.replicator.schema;
 
 import ru.xander.replicator.exception.SchemaException;
+import ru.xander.replicator.listener.Listener;
+import ru.xander.replicator.listener.Progress;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -12,29 +14,36 @@ import java.util.Map;
 /**
  * @author Alexander Shakhov
  */
-public class Dml implements AutoCloseable {
+public class TableRowExtractor implements AutoCloseable {
 
     private final long totalRows;
     private final PreparedStatement ps;
+    private final Listener listener;
+    private int currentRow;
+    private long verboseEach;
     private ResultSet resultSet;
     private String[] columns;
 
-    public Dml(long totalRows, PreparedStatement ps) {
+    public TableRowExtractor(long totalRows, PreparedStatement ps, Listener listener) {
         this.totalRows = totalRows;
         this.ps = ps;
+        this.listener = listener;
     }
 
-    public long getTotalRows() {
-        return totalRows;
+    public void setVerboseEach(long verboseEach) {
+        this.verboseEach = verboseEach;
     }
 
     public Map<String, Object> nextRow() {
         try {
             if (resultSet == null) {
                 resultSet = ps.executeQuery();
+                currentRow = 0;
                 initColumns();
             }
             if (resultSet.next()) {
+                currentRow++;
+                progress();
                 return mapRow(resultSet);
             } else {
                 return null;
@@ -59,6 +68,19 @@ public class Dml implements AutoCloseable {
             row.put(column, resultSet.getObject(column));
         }
         return row;
+    }
+
+    private void progress() {
+        if ((currentRow % verboseEach) != 0) {
+            return;
+        }
+        if (listener != null) {
+            Progress progress = new Progress();
+            progress.setMessage("Extract rows for table "); //TODO: подцепить имя таблицы
+            progress.setValue(currentRow);
+            progress.setTotal(totalRows);
+            listener.progress(progress);
+        }
     }
 
     @Override

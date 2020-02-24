@@ -61,9 +61,7 @@ public interface Schema {
 
     void analyzeTable(Table table);
 
-    Ddl getDdl(Table table);
-
-    Dml getDml(Table table);
+    TableRowExtractor getRows(Table table);
 
     BatchExecutor createBatchExecutor();
 

@@ -10,15 +10,14 @@ import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnDiff;
 import ru.xander.replicator.schema.ColumnType;
 import ru.xander.replicator.schema.Constraint;
-import ru.xander.replicator.schema.Ddl;
 import ru.xander.replicator.schema.Dialect;
-import ru.xander.replicator.schema.Dml;
 import ru.xander.replicator.schema.ExportedKey;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
+import ru.xander.replicator.schema.TableRowExtractor;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.schema.VendorType;
 
@@ -35,12 +34,10 @@ import static ru.xander.replicator.listener.AlterType.*;
  */
 public class OracleSchema extends AbstractSchema {
 
-    //    private final String workSchema;
     private final OracleDialect dialect;
 
     public OracleSchema(Connection connection, Listener listener, String workSchema) {
         super(connection, listener);
-//        this.workSchema = workSchema;
         this.dialect = new OracleDialect(workSchema);
     }
 
@@ -243,32 +240,12 @@ public class OracleSchema extends AbstractSchema {
     }
 
     @Override
-    public Ddl getDdl(Table table) {
-        notify("Get DDL for table " + table.getName());
-        Ddl ddl = new Ddl();
-        ddl.setTable(dialect.createTableQuery(table));
-        if (table.getPrimaryKey() != null) {
-            ddl.addConstraints(dialect.createPrimaryKeyQuery(table.getPrimaryKey()));
-        }
-        table.getImportedKeys().forEach(importedKey -> ddl.addConstraints(dialect.createImportedKeyQuery(importedKey)));
-        // чек-констрейнты будут создаваться вместе со столбцами
-//        table.getCheckConstraints().forEach(checkConstraint -> ddl.addConstraints(dialect.createCheckConstraintQuery(checkConstraint)));
-        table.getIndices().forEach(index -> ddl.addIndex(dialect.createIndexQuery(index)));
-        table.getTriggers().forEach(trigger -> ddl.addTrigger(dialect.createTriggerQuery(trigger)));
-        if (table.getSequence() != null) {
-            ddl.setSequence(dialect.createSequenceQuery(table.getSequence()));
-        }
-        ddl.setAnalyze(dialect.analyzeTableQuery(table));
-        return ddl;
-    }
-
-    @Override
-    public Dml getDml(Table table) {
+    public TableRowExtractor getRows(Table table) {
         notify("Get DML for table " + table.getName());
         try {
             String selectQuery = dialect.selectQuery(table);
             long totalRows = selectCount(selectQuery);
-            return new Dml(totalRows, connection.prepareStatement(selectQuery));
+            return new TableRowExtractor(totalRows, connection.prepareStatement(selectQuery), listener);
         } catch (Exception e) {
             String errorMessage = "Cannot get dml, cause by: " + e.getMessage();
             throw new SchemaException(errorMessage, e);

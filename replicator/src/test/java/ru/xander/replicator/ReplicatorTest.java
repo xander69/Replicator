@@ -4,6 +4,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import ru.xander.replicator.compare.CompareResult;
 import ru.xander.replicator.compare.CompareResultType;
+import ru.xander.replicator.dump.DumpType;
 
 import java.io.ByteArrayOutputStream;
 
@@ -61,6 +62,7 @@ public class ReplicatorTest {
         Replicator.dump()
                 .schemaConfig(TestUtils.sourceSchemaOracle())
                 .outputStream(output)
+                .dumpType(DumpType.SQL)
                 .tableName("SAMPLE_TABLE")
                 .dumpDdl(true)
                 .dumpDml(true)

@@ -18,7 +18,7 @@ import java.sql.Statement;
 public abstract class AbstractSchema implements Schema {
 
     protected final Connection connection;
-    private final Listener listener;
+    protected final Listener listener;
 
     public AbstractSchema(Connection connection, Listener listener) {
         this.connection = connection;

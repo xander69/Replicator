@@ -1,20 +1,15 @@
 package ru.xander.replicator.action;
 
 import ru.xander.replicator.dump.DumpOptions;
+import ru.xander.replicator.dump.DumpType;
+import ru.xander.replicator.dump.SqlTableSerializer;
+import ru.xander.replicator.dump.TableSerializer;
 import ru.xander.replicator.exception.ReplicatorException;
-import ru.xander.replicator.listener.Listener;
-import ru.xander.replicator.listener.Progress;
-import ru.xander.replicator.schema.Ddl;
-import ru.xander.replicator.schema.Dialect;
-import ru.xander.replicator.schema.Dml;
 import ru.xander.replicator.schema.Schema;
 import ru.xander.replicator.schema.SchemaConfig;
 import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.Table;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -23,17 +18,18 @@ import java.util.Objects;
 public class DumpAction implements Action {
 
     private final SchemaConfig schemaConfig;
-    private final OutputStream output;
+    private final DumpType dumpType;
     private final DumpOptions options;
     private final String tableName;
 
-    public DumpAction(SchemaConfig schemaConfig, OutputStream output, DumpOptions options, String tableName) {
+    public DumpAction(SchemaConfig schemaConfig, DumpType dumpType, DumpOptions options, String tableName) {
         Objects.requireNonNull(schemaConfig, "Configure schema");
-        Objects.requireNonNull(output, "Output stream");
-        Objects.requireNonNull(options, "Options");
+        Objects.requireNonNull(dumpType, "Choose dump type");
+        Objects.requireNonNull(options, "Options cannot be null");
+        Objects.requireNonNull(options.getOutputStream(), "Output stream cannot be null");
         Objects.requireNonNull(tableName, "Table name for dump");
         this.schemaConfig = schemaConfig;
-        this.output = output;
+        this.dumpType = dumpType;
         this.options = options;
         this.tableName = tableName;
     }
@@ -49,113 +45,21 @@ public class DumpAction implements Action {
         if (table == null) {
             throw new ReplicatorException("Table " + tableName + " not found");
         }
+        TableSerializer tableSerializer;
+        switch (dumpType) {
+            case SQL:
+                tableSerializer = new SqlTableSerializer(schema);
+                break;
+            case JSON:
+            case XML:
+            default:
+                throw new ReplicatorException("Unsupported dump type <" + dumpType + ">");
+        }
         try {
-            Ddl ddl = schema.getDdl(table);
-            if (options.isDumpDdl()) {
-                dumpTableDdl(ddl);
-                if (options.isDumpDml()) {
-                    output.write('\n');
-                    dumpTableDml(schema, table);
-                }
-                dumpTableObjectsDdl(ddl);
-                dumpAnalyze(ddl);
-            } else if (options.isDumpDml()) {
-                dumpTableDml(schema, table);
-                dumpAnalyze(ddl);
-            }
+            tableSerializer.serialize(table, options);
         } catch (Exception e) {
             String errorMessage = "Failed to dump table " + tableName + ": " + e.getMessage();
             throw new ReplicatorException(errorMessage, e);
-        }
-    }
-
-    private void dumpTableDdl(Ddl ddl) throws IOException {
-        output.write(ddl.getTable().getBytes(options.getCharset()));
-        output.write(';');
-        output.write('\n');
-    }
-
-    private void dumpTableObjectsDdl(Ddl ddl) throws IOException {
-        if (!ddl.getConstraints().isEmpty()) {
-            output.write('\n');
-            for (String constraint : ddl.getConstraints()) {
-                output.write(constraint.getBytes(options.getCharset()));
-                output.write(';');
-                output.write('\n');
-            }
-        }
-        if (!ddl.getIndices().isEmpty()) {
-            output.write('\n');
-            for (String index : ddl.getIndices()) {
-                output.write(index.getBytes(options.getCharset()));
-                output.write(';');
-                output.write('\n');
-            }
-        }
-        if (ddl.getSequence() != null) {
-            output.write('\n');
-            output.write(ddl.getSequence().getBytes(options.getCharset()));
-            output.write(';');
-            output.write('\n');
-        }
-        if (!ddl.getTriggers().isEmpty()) {
-            output.write('\n');
-            for (String trigger : ddl.getTriggers()) {
-                output.write(trigger.getBytes(options.getCharset()));
-                output.write('\n');
-            }
-        }
-    }
-
-    private void dumpAnalyze(Ddl ddl) throws IOException {
-        output.write('\n');
-        output.write(ddl.getAnalyze().getBytes(options.getCharset()));
-        output.write('\n');
-    }
-
-    private void dumpTableDml(Schema schema, Table table) throws IOException {
-        try (Dml dml = schema.getDml(table)) {
-            final long commitEach = options.getCommitEach();
-            final long verboseEach = options.getVerboseEach();
-            final Dialect dialect = schema.getDialect();
-            long totalRows = dml.getTotalRows();
-            long currentRow = 0;
-
-            Map<String, Object> row;
-            while ((row = dml.nextRow()) != null) {
-                String insertQuery = dialect.insertQuery(table, row);
-                output.write(insertQuery.getBytes(options.getCharset()));
-                output.write(';');
-                output.write('\n');
-
-                currentRow++;
-                if ((commitEach > 0) && ((currentRow % commitEach) == 0)) {
-                    output.write(dialect.commitQuery().getBytes(options.getCharset()));
-                    output.write(';');
-                    output.write('\n');
-                }
-
-                if ((currentRow % verboseEach) == 0) {
-                    progress("Dump table " + table.getName(), currentRow, totalRows);
-                }
-            }
-
-            if ((commitEach == 0) || ((currentRow % commitEach) != 0)) {
-                output.write(dialect.commitQuery().getBytes(options.getCharset()));
-                output.write(';');
-                output.write('\n');
-            }
-        }
-    }
-
-    private void progress(String message, long value, long total) {
-        Listener listener = schemaConfig.getListener();
-        if (listener != null) {
-            Progress progress = new Progress();
-            progress.setMessage(message);
-            progress.setValue(value);
-            progress.setTotal(total);
-            listener.progress(progress);
         }
     }
 }

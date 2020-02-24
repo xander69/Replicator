@@ -1,16 +1,26 @@
 package ru.xander.replicator.dump;
 
+import java.io.OutputStream;
 import java.nio.charset.Charset;
 
 /**
  * @author Alexander Shakhov
  */
 public class DumpOptions {
+    private OutputStream outputStream;
     private boolean dumpDdl;
     private boolean dumpDml;
     private Charset charset;
     private long verboseEach;
     private long commitEach;
+
+    public OutputStream getOutputStream() {
+        return outputStream;
+    }
+
+    public void setOutputStream(OutputStream outputStream) {
+        this.outputStream = outputStream;
+    }
 
     public boolean isDumpDdl() {
         return dumpDdl;
