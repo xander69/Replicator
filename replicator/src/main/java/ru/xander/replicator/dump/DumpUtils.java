@@ -1,6 +1,6 @@
 package ru.xander.replicator.dump;
 
-import ru.xander.replicator.exception.ReplicatorException;
+import ru.xander.replicator.exception.DumpException;
 
 import javax.xml.bind.DatatypeConverter;
 import java.sql.Blob;
@@ -24,7 +24,7 @@ public abstract class DumpUtils {
         try {
             return blob.getBytes(0, (int) blob.length());
         } catch (SQLException e) {
-            throw new ReplicatorException("Cannot convert BLOB-value to BASE64: " + e.getMessage(), e);
+            throw new DumpException("Cannot convert BLOB-value to BASE64: " + e.getMessage(), e);
         }
     }
 

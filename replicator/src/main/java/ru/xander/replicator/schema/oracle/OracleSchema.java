@@ -9,6 +9,7 @@ import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnDiff;
 import ru.xander.replicator.schema.ColumnType;
 import ru.xander.replicator.schema.Constraint;
+import ru.xander.replicator.schema.DataFormatter;
 import ru.xander.replicator.schema.Dialect;
 import ru.xander.replicator.schema.ExportedKey;
 import ru.xander.replicator.schema.ImportedKey;
@@ -47,6 +48,11 @@ public class OracleSchema extends AbstractSchema {
     @Override
     public Dialect getDialect() {
         return dialect;
+    }
+
+    @Override
+    public DataFormatter getDataFormatter() {
+        return new OracleDataFormatter();
     }
 
     @Override
@@ -263,7 +269,7 @@ public class OracleSchema extends AbstractSchema {
     private void findColumns(Table table) {
         notify("Find columns for table " + table.getName());
         select(dialect.selectColumnsQuery(table), rs -> {
-            int dataLength = rs.getInt("data_length");
+//            int dataLength = rs.getInt("data_length");
             int dataPrecision = rs.getInt("data_precision");
             int dataScale = rs.getInt("data_scale");
             int charLength = rs.getInt("char_length");
@@ -282,7 +288,7 @@ public class OracleSchema extends AbstractSchema {
                 case INTEGER:
                     column.setSize(dataPrecision);
                     break;
-                case DECIMAL:
+                case FLOAT:
                     column.setSize(dataPrecision);
                     column.setScale(dataScale);
                     break;
@@ -292,9 +298,6 @@ public class OracleSchema extends AbstractSchema {
                     break;
                 case TIMESTAMP:
                     column.setScale(dataScale);
-                    break;
-                case RAW:
-                    column.setSize(dataLength);
                     break;
             }
 

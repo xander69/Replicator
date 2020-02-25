@@ -1,16 +1,12 @@
 package ru.xander.replicator.schema.oracle;
 
-import ru.xander.replicator.dump.data.TableField;
-import ru.xander.replicator.dump.data.TableRow;
-import ru.xander.replicator.exception.SchemaException;
 import ru.xander.replicator.filter.Filter;
 import ru.xander.replicator.filter.FilterType;
+import ru.xander.replicator.schema.AbstractDialect;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnDiff;
-import ru.xander.replicator.schema.ColumnType;
 import ru.xander.replicator.schema.Constraint;
-import ru.xander.replicator.schema.Dialect;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.IndexType;
@@ -20,31 +16,16 @@ import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.util.StringUtils;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.sql.Clob;
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
-import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
  * @author Alexander Shakhov
  */
-class OracleDialect implements Dialect {
-
-    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    private static final SimpleDateFormat timestampFormat = new SimpleDateFormat("yyyy-MM.dd HH:mm:ss.SSS");
-
-    private final String workSchema;
+class OracleDialect extends AbstractDialect {
 
     OracleDialect(String workSchema) {
-        this.workSchema = workSchema;
+        super(workSchema);
     }
 
     @Override
@@ -238,40 +219,6 @@ class OracleDialect implements Dialect {
                 "      METHOD_OPT => 'FOR ALL COLUMNS SIZE AUTO'\n" +
                 "  );\n" +
                 "END;";
-    }
-
-    @Override
-    public String insertQuery(Table table) {
-        return "INSERT INTO " + getQualifiedName(table) + '\n' +
-                "(" +
-                table.getColumns()
-                        .stream()
-                        .sorted()
-                        .map(Column::getName)
-                        .collect(Collectors.joining(", ")) + ")\n" +
-                "VALUES (" +
-                table.getColumns()
-                        .stream()
-                        .map(c -> "?")
-                        .collect(Collectors.joining(", ")) + ')';
-    }
-
-    @Override
-    public String insertQuery(TableRow row) {
-        //TODO: не поддерживаются BLOB-поля
-        return "INSERT INTO " + getQualifiedName(row.getTable()) +
-                " (" +
-                Arrays.stream(row.getFields())
-                        .filter(field -> field.getColumn().getColumnType() != ColumnType.BLOB)
-//                        .sorted()
-                        .map(field -> field.getColumn().getName())
-                        .collect(Collectors.joining(", ")) + ")\n" +
-                "VALUES (" +
-                Arrays.stream(row.getFields())
-                        .filter(field -> field.getColumn().getColumnType() != ColumnType.BLOB)
-//                        .sorted()
-                        .map(OracleDialect::formatValue)
-                        .collect(Collectors.joining(", ")) + ')';
     }
 
     @Override
@@ -541,112 +488,25 @@ class OracleDialect implements Dialect {
     }
 
     private static String getDataType(Column column) {
-        String dataType = OracleType.fromColumnType(column.getColumnType());
+        final String dataTypeName = column.getColumnType().toOracle();
         switch (column.getColumnType()) {
             case BOOLEAN:
-                return dataType + "(1)";
+                return dataTypeName + "(1)";
             case INTEGER:
                 if (column.getSize() == 0) {
-                    return dataType;
+                    return dataTypeName;
                 }
-                return dataType + "(" + column.getSize() + ")";
-            case RAW:
+                return dataTypeName + "(" + column.getSize() + ")";
             case CHAR:
-                return dataType + "(" + column.getSize() + ")";
-            case DECIMAL:
-                return dataType + "(" + column.getSize() + ", " + column.getScale() + ")";
+                return dataTypeName + "(" + column.getSize() + ")";
+            case FLOAT:
+                return dataTypeName + "(" + column.getSize() + ", " + column.getScale() + ")";
             case STRING:
-                return dataType + "(" + column.getSize() + " CHAR)";
+                return dataTypeName + "(" + column.getSize() + " CHAR)";
             case TIMESTAMP:
-                return dataType + "(" + column.getScale() + ")";
+                return dataTypeName + "(" + column.getScale() + ")";
             default:
-                return dataType;
+                return dataTypeName;
         }
-    }
-
-    private static String formatValue(TableField field) {
-        Object value = field.getValue();
-        if (value == null) {
-            return "NULL";
-        }
-        Column column = field.getColumn();
-        switch (column.getColumnType()) {
-            case CHAR:
-            case STRING:
-            case RAW: {
-                return quoteString(String.valueOf(value));
-            }
-            case CLOB: {
-                String clob = readClob((Clob) value);
-                if (clob.length() <= 2000) {
-                    return quoteString(clob);
-                }
-                String[] parts = StringUtils.cutString(clob, 2000);
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < parts.length; i++) {
-                    sb.append("TO_CLOB(").append(quoteString(parts[i])).append(")");
-                    if (i < (parts.length - 1)) {
-                        sb.append(" || ");
-                    }
-                }
-                return sb.toString();
-            }
-            case DATE: {
-                Date d = (Date) value;
-                return "TO_DATE('" + dateFormat.format(d) + "', 'YYYY-MM-DD HH24:MI:SS')";
-            }
-            case TIMESTAMP: {
-                Timestamp t = (Timestamp) value;
-                return "TO_TIMESTAMP('" + timestampFormat.format(t) + "', 'YYYY-MM-DD HH24:MI:SS.FF3')";
-            }
-            case DECIMAL: {
-                DecimalFormatSymbols formatSymbols = DecimalFormatSymbols.getInstance();
-                formatSymbols.setDecimalSeparator('.');
-                DecimalFormat decimalFormat = new DecimalFormat("##0.0" + StringUtils.repeat('#', column.getScale() - 1));
-                decimalFormat.setDecimalFormatSymbols(formatSymbols);
-                return decimalFormat.format(value);
-            }
-            default:
-                return String.valueOf(value);
-        }
-    }
-
-    private String getQualifiedName(Table table) {
-        return workSchema + '.' + table.getName();
-    }
-
-    private String getQualifiedName(Index index) {
-        return workSchema + '.' + index.getName();
-    }
-
-    private String getQualifiedName(Trigger trigger) {
-        return workSchema + '.' + trigger.getName();
-    }
-
-    private String getQualifiedName(Sequence sequence) {
-        return workSchema + '.' + sequence.getName();
-    }
-
-    private static String quoteString(String string) {
-        return '\'' + string
-                .replace("'", "''")
-                .replace("\n", "'||CHR(10)||'")
-                .replace("\r", "'||CHR(13)||'")
-                + '\'';
-    }
-
-    private static String readClob(Clob clob) {
-        StringBuilder value = new StringBuilder();
-        try (Reader reader = clob.getCharacterStream()) {
-            char[] buffer = new char[4096];
-            int len;
-            while ((len = reader.read(buffer)) != -1) {
-                value.append(buffer, 0, len);
-            }
-        } catch (SQLException | IOException e) {
-            String errorMessage = "Cannot read CLOB value: " + e.getMessage();
-            throw new SchemaException(errorMessage, e);
-        }
-        return value.toString();
     }
 }

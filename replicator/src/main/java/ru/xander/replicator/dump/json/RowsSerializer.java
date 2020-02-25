@@ -33,6 +33,7 @@ public class RowsSerializer extends JsonSerializer<TableRowExtractor> {
                         gen.writeStringField("value", (String) value);
                         break;
                     case DATE:
+                    case TIME:
                     case TIMESTAMP:
                         gen.writeStringField("value", DumpUtils.dateToString((Date) value));
                         break;
@@ -43,7 +44,7 @@ public class RowsSerializer extends JsonSerializer<TableRowExtractor> {
                         gen.writeBooleanField("value", (Boolean) value);
                         break;
                     case INTEGER:
-                    case DECIMAL:
+                    case FLOAT:
                     case SERIAL:
                         gen.writeObjectField("value", value);
                         break;

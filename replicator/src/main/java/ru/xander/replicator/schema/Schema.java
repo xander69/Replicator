@@ -13,6 +13,8 @@ public interface Schema {
 
     Dialect getDialect();
 
+    DataFormatter getDataFormatter();
+
     List<String> getTables(List<Filter> filterList);
 
     Table getTable(String tableName);

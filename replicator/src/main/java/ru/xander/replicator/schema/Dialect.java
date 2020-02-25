@@ -1,7 +1,5 @@
 package ru.xander.replicator.schema;
 
-import ru.xander.replicator.dump.data.TableRow;
-
 /**
  * @author Alexander Shakhov
  */
@@ -57,8 +55,4 @@ public interface Dialect {
     }
 
     String selectQuery(Table table);
-
-    String insertQuery(Table table);
-
-    String insertQuery(TableRow row);
 }

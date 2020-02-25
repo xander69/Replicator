@@ -1,9 +1,13 @@
 package ru.xander.replicator.dump;
 
 import ru.xander.replicator.action.DumpActionConfigurer;
+import ru.xander.replicator.dump.data.TableField;
 import ru.xander.replicator.dump.data.TableRow;
 import ru.xander.replicator.dump.data.TableRowExtractor;
+import ru.xander.replicator.exception.DumpException;
 import ru.xander.replicator.schema.CheckConstraint;
+import ru.xander.replicator.schema.Column;
+import ru.xander.replicator.schema.DataFormatter;
 import ru.xander.replicator.schema.Dialect;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
@@ -15,6 +19,8 @@ import ru.xander.replicator.util.StringUtils;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 /**
  * @author Alexander Shakhov
@@ -100,13 +106,14 @@ public class SqlTableSerializer implements TableSerializer {
             rowExtractor.setVerboseEach(options.getVerboseEach());
 
             final Dialect dialect = schemaConnection.getSchema().getDialect();
+            final DataFormatter formatter = schemaConnection.getSchema().getDataFormatter();
             final long commitEach = options.getCommitEach();
             final Charset charset = options.getCharset();
 
             long currentRow = 0;
             TableRow row;
             while ((row = rowExtractor.nextRow()) != null) {
-                String insertQuery = dialect.insertQuery(row);
+                String insertQuery = insertQuery(row, formatter);
                 output.write(insertQuery.getBytes(charset));
                 output.write(';');
                 output.write('\n');
@@ -131,5 +138,53 @@ public class SqlTableSerializer implements TableSerializer {
         output.write('\n');
         output.write(dialect.analyzeTableQuery(table).getBytes(charset));
         output.write('\n');
+    }
+
+    private String insertQuery(TableRow row, DataFormatter formatter) {
+        Table table = row.getTable();
+        return "INSERT INTO " + table.getSchema() + '.' + table.getName() +
+                " (" +
+                Arrays.stream(row.getFields())
+                        .map(field -> field.getColumn().getName())
+                        .collect(Collectors.joining(", ")) +
+                ")\n" +
+                "VALUES (" +
+                Arrays.stream(row.getFields())
+                        .map(field -> formatValue(field, formatter))
+                        .collect(Collectors.joining(", ")) +
+                ')';
+    }
+
+    private String formatValue(TableField field, DataFormatter formatter) {
+        Column column = field.getColumn();
+        Object value = field.getValue();
+        if (value == null) {
+            return formatter.formatNull(column);
+        }
+        switch (column.getColumnType()) {
+            case BOOLEAN:
+                return formatter.formatBoolean(value, column);
+            case INTEGER:
+                return formatter.formatInteger(value, column);
+            case FLOAT:
+                return formatter.formatFloat(value, column);
+            case SERIAL:
+                return formatter.formatSerial(value, column);
+            case CHAR:
+                return formatter.formatChar(value, column);
+            case STRING:
+                return formatter.formatString(value, column);
+            case DATE:
+                return formatter.formatDate(value, column);
+            case TIME:
+                return formatter.formatTime(value, column);
+            case TIMESTAMP:
+                return formatter.formatTimestamp(value, column);
+            case CLOB:
+                return formatter.formatClob(value, column);
+            case BLOB:
+                return formatter.formatBlob(value, column);
+        }
+        throw new DumpException("Unsupproted datatype <" + column.getColumnType() + ">");
     }
 }
