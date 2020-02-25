@@ -1,7 +1,5 @@
 package ru.xander.replicator.schema;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -11,7 +9,6 @@ import java.util.Map;
  * @author Alexander Shakhov
  */
 //TODO: реализовать поддержку партиций
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class Table {
 
     private String schema;

@@ -1,17 +1,12 @@
 package ru.xander.replicator.schema;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import java.util.List;
 
 /**
  * @author Alexander Shakhov
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class Index {
 
-    @JsonBackReference
     private Table table;
     private String name;
     private IndexType type;
