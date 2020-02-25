@@ -47,12 +47,12 @@ class OracleDataFormatter implements DataFormatter {
 
     @Override
     public String formatChar(Object value, Column column) {
-        return quoteString(String.valueOf(value));
+        return formatClobValue(String.valueOf(value));
     }
 
     @Override
     public String formatString(Object value, Column column) {
-        return quoteString(String.valueOf(value));
+        return formatClobValue(String.valueOf(value));
     }
 
     @Override
@@ -73,10 +73,20 @@ class OracleDataFormatter implements DataFormatter {
     @Override
     public String formatClob(Object value, Column column) {
         String clob = readClob((Clob) value);
-        if (clob.length() <= 2000) {
+        return formatClobValue(clob);
+    }
+
+    @Override
+    public String formatBlob(Object value, Column column) {
+        //TODO: blob не поддерживается
+        return "NULL";
+    }
+
+    private String formatClobValue(String clob) {
+        if (clob.length() <= OracleDialect.MAX_VARCHAR_SIZE) {
             return quoteString(clob);
         }
-        String[] parts = StringUtils.cutString(clob, 2000);
+        String[] parts = StringUtils.cutString(clob, OracleDialect.MAX_VARCHAR_SIZE);
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < parts.length; i++) {
             sb.append("TO_CLOB(").append(quoteString(parts[i])).append(")");
@@ -85,12 +95,6 @@ class OracleDataFormatter implements DataFormatter {
             }
         }
         return sb.toString();
-    }
-
-    @Override
-    public String formatBlob(Object value, Column column) {
-        //TODO: blob не поддерживается
-        return "NULL";
     }
 
     private static String quoteString(String string) {

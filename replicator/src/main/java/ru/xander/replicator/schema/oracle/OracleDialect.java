@@ -21,6 +21,10 @@ import java.util.stream.Collectors;
  */
 class OracleDialect extends AbstractDialect {
 
+    private static final int MAX_NUMBER_SIZE = 38;
+    private static final int MAX_NUMBER_SCALE = 127;
+    static final int MAX_VARCHAR_SIZE = 2000;
+
     OracleDialect(String workSchema) {
         super(workSchema);
     }
@@ -251,15 +255,21 @@ class OracleDialect extends AbstractDialect {
             case BOOLEAN:
                 return dataTypeName + "(1)";
             case INTEGER:
-                if (column.getSize() == 0) {
+                if (column.getSize() <= 0) {
                     return dataTypeName;
                 }
-                return dataTypeName + "(" + column.getSize() + ")";
+                return dataTypeName + "(" + Math.min(column.getSize(), MAX_NUMBER_SIZE) + ")";
             case CHAR:
+                if (column.getSize() > MAX_VARCHAR_SIZE) {
+                    return "CLOB";
+                }
                 return dataTypeName + "(" + column.getSize() + ")";
             case FLOAT:
-                return dataTypeName + "(" + column.getSize() + ", " + column.getScale() + ")";
+                return dataTypeName + "(" + Math.min(column.getSize(), MAX_NUMBER_SIZE) + ", " + Math.min(column.getSize(), MAX_NUMBER_SCALE) + ")";
             case STRING:
+                if (column.getSize() > MAX_VARCHAR_SIZE) {
+                    return "CLOB";
+                }
                 return dataTypeName + "(" + column.getSize() + " CHAR)";
             case TIMESTAMP:
                 return dataTypeName + "(" + column.getScale() + ")";
