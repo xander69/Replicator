@@ -11,6 +11,7 @@ public class DumpOptions {
     private Charset charset;
     private long verboseEach;
     private long commitEach;
+    private boolean format;
 
     public boolean isDumpDdl() {
         return dumpDdl;
@@ -50,5 +51,13 @@ public class DumpOptions {
 
     public void setCommitEach(long commitEach) {
         this.commitEach = commitEach;
+    }
+
+    public boolean isFormat() {
+        return format;
+    }
+
+    public void setFormat(boolean format) {
+        this.format = format;
     }
 }

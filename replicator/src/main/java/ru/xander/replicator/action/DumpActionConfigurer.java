@@ -13,10 +13,13 @@ import java.nio.charset.StandardCharsets;
  */
 public class DumpActionConfigurer implements ActionConfigurer<DumpAction> {
 
+    public static final DumpType DEFAULT_DUMP_TYPE = DumpType.SQL;
+    public static final boolean DEFAULT_DUMP_DDL = true;
+    public static final boolean DEFAULT_DUMP_DML = true;
     public static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
     public static final long DEFAULT_VERBOSE_EACH = 1000L;
     public static final long DEFAULT_COMMIT_EACH = 1000L;
-    public static final DumpType DEFAULT_DUMP_TYPE = DumpType.SQL;
+    public static final boolean DEFAULT_FORMAT = false;
 
     /**
      * Конфигурация схемы.
@@ -41,12 +44,12 @@ public class DumpActionConfigurer implements ActionConfigurer<DumpAction> {
     /**
      * Сохранять DDL в дамп.
      */
-    private boolean dumpDdl = true;
+    private boolean dumpDdl = DEFAULT_DUMP_DDL;
 
     /**
      * Сохранять данные в дамп.
      */
-    private boolean dumpDml = true;
+    private boolean dumpDml = DEFAULT_DUMP_DML;
 
     /**
      * Кодировка выходного файла.
@@ -63,6 +66,11 @@ public class DumpActionConfigurer implements ActionConfigurer<DumpAction> {
      * Если 0, то коммит будет только в конце.
      */
     private long commitEach = DEFAULT_COMMIT_EACH;
+
+    /**
+     * Форматировать вывод (только для форматов JSON и XML).
+     */
+    private boolean format = DEFAULT_FORMAT;
 
     /**
      * Имя таблицы, для которой следует снять дамп.
@@ -109,6 +117,11 @@ public class DumpActionConfigurer implements ActionConfigurer<DumpAction> {
         return this;
     }
 
+    public DumpActionConfigurer format(boolean format) {
+        this.format = format;
+        return this;
+    }
+
     public DumpActionConfigurer tableName(String tableName) {
         this.tableName = tableName;
         return this;
@@ -122,6 +135,7 @@ public class DumpActionConfigurer implements ActionConfigurer<DumpAction> {
         options.setCharset(charset);
         options.setVerboseEach(verboseEach);
         options.setCommitEach(commitEach);
+        options.setFormat(format);
         return new DumpAction(schemaConfig, dumpType, outputStream, options, tableName);
     }
 }

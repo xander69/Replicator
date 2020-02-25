@@ -5,6 +5,7 @@ import ru.xander.replicator.dump.DumpType;
 import ru.xander.replicator.dump.JsonTableSerializer;
 import ru.xander.replicator.dump.SqlTableSerializer;
 import ru.xander.replicator.dump.TableSerializer;
+import ru.xander.replicator.dump.XmlTableSerializer;
 import ru.xander.replicator.exception.ReplicatorException;
 import ru.xander.replicator.schema.Schema;
 import ru.xander.replicator.schema.SchemaConfig;
@@ -58,6 +59,8 @@ public class DumpAction implements Action {
                 tableSerializer = new JsonTableSerializer();
                 break;
             case XML:
+                tableSerializer = new XmlTableSerializer();
+                break;
             default:
                 throw new ReplicatorException("Unsupported dump type <" + dumpType + ">");
         }
