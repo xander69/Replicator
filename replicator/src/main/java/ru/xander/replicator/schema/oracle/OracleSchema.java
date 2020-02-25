@@ -19,6 +19,7 @@ import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.schema.VendorType;
+import ru.xander.replicator.util.StringUtils;
 
 import java.sql.Connection;
 import java.util.ArrayList;
@@ -33,11 +34,15 @@ import static ru.xander.replicator.listener.AlterType.*;
  */
 public class OracleSchema extends AbstractSchema {
 
+    private final String workSchema;
     private final OracleDialect dialect;
+    private final OracleSchemaQueries schemaQueries;
 
     public OracleSchema(Connection connection, Listener listener, String workSchema) {
         super(connection, listener);
+        this.workSchema = workSchema;
         this.dialect = new OracleDialect(workSchema);
+        this.schemaQueries = new OracleSchemaQueries(workSchema);
     }
 
     @Override
@@ -250,13 +255,13 @@ public class OracleSchema extends AbstractSchema {
     private List<String> findTables(List<Filter> filterList) {
         notify("Find tables");
         List<String> tableList = new LinkedList<>();
-        select(dialect.selectTablesQuery(filterList), rs -> tableList.add(rs.getString("TABLE_NAME")));
+        select(schemaQueries.selectTables(filterList), rs -> tableList.add(rs.getString("TABLE_NAME")));
         return tableList;
     }
 
     private Table findTable(String tableName) {
         notify("Find table " + tableName);
-        return selectOne(dialect.selectTableQuery(tableName),
+        return selectOne(schemaQueries.selectTable(tableName),
                 rs -> {
                     Table table = new Table();
                     table.setSchema(rs.getString("owner"));
@@ -268,7 +273,7 @@ public class OracleSchema extends AbstractSchema {
 
     private void findColumns(Table table) {
         notify("Find columns for table " + table.getName());
-        select(dialect.selectColumnsQuery(table), rs -> {
+        select(schemaQueries.selectColumns(table), rs -> {
 //            int dataLength = rs.getInt("data_length");
             int dataPrecision = rs.getInt("data_precision");
             int dataScale = rs.getInt("data_scale");
@@ -307,7 +312,7 @@ public class OracleSchema extends AbstractSchema {
 
     private void findConstraints(Table table) {
         notify("Find constraints for table " + table.getName());
-        select(dialect.selectConstraintsQuery(table), rs -> {
+        select(schemaQueries.selectConstraints(table), rs -> {
             String constraintType = rs.getString("constraint_type");
             switch (constraintType) {
                 case "P":
@@ -357,7 +362,7 @@ public class OracleSchema extends AbstractSchema {
 
     private void findIndices(Table table) {
         notify("Find indices for table " + table.getName());
-        select(dialect.selectIndicesQuery(table), rs -> {
+        select(schemaQueries.selectIndices(table), rs -> {
             Index index = new Index();
             index.setTable(table);
             index.setName(rs.getString("index_name"));
@@ -370,7 +375,7 @@ public class OracleSchema extends AbstractSchema {
 
     private void findTriggers(Table table) {
         notify("Find trigger for table " + table.getName());
-        select(dialect.selectTriggersQuery(table), rs -> {
+        select(schemaQueries.selectTriggers(table), rs -> {
             String description = rs.getString("description").trim();
             String whenClause = rs.getString("when_clause");
             String triggerBody = rs.getString("trigger_body").trim();
@@ -381,7 +386,7 @@ public class OracleSchema extends AbstractSchema {
             trigger.setName(rs.getString("trigger_name"));
 
             List<OracleTriggerDependency> dependencies = new ArrayList<>();
-            select(dialect.selectTriggerDependenciesQuery(trigger), rsDeps -> {
+            select(schemaQueries.selectTriggerDependencies(trigger), rsDeps -> {
                 OracleTriggerDependency dependency = new OracleTriggerDependency();
                 dependency.setSchema(rsDeps.getString("REFERENCED_OWNER"));
                 dependency.setName(rsDeps.getString("REFERENCED_NAME"));
@@ -389,7 +394,7 @@ public class OracleSchema extends AbstractSchema {
                 dependencies.add(dependency);
             });
 
-            String body = dialect.prepareTriggerBody(dependencies, description, whenClause, triggerBody);
+            String body = prepareTriggerBody(dependencies, description, whenClause, triggerBody);
             trigger.setBody("CREATE OR REPLACE TRIGGER " + body);
             trigger.setEnabled(enabled);
             trigger.setVendorType(VendorType.ORACLE);
@@ -399,7 +404,7 @@ public class OracleSchema extends AbstractSchema {
 
     private void findSequence(Table table) {
         notify("Find sequence for table " + table.getName());
-        table.setSequence(selectOne(dialect.selectSequenceQuery(table), rs -> {
+        table.setSequence(selectOne(schemaQueries.selectSequence(table), rs -> {
             Sequence sequence = new Sequence();
             sequence.setTable(table);
             sequence.setSchema(rs.getString("sequence_owner"));
@@ -414,7 +419,38 @@ public class OracleSchema extends AbstractSchema {
     }
 
     private boolean isObjectExists(String objectName, String objectType) {
-        Boolean exists = selectOne(dialect.selectObjectQuery(objectName, objectType), rs -> true);
+        Boolean exists = selectOne(schemaQueries.selectObject(objectName, objectType), rs -> true);
         return (exists != null);
+    }
+
+    private String prepareTriggerBody(List<OracleTriggerDependency> dependencies, String description, String whenClause, String body) {
+        String upperedDescr = description.toUpperCase();
+//        String upperedBody = body.toUpperCase();
+        for (OracleTriggerDependency dependency : dependencies) {
+            int descrIndex = upperedDescr.indexOf(dependency.getName());
+            if (descrIndex > 0) {
+                if (upperedDescr.charAt(descrIndex - 1) != '.') {
+                    upperedDescr = upperedDescr.substring(0, descrIndex) + workSchema + '.' + upperedDescr.substring(descrIndex);
+                    description = description.substring(0, descrIndex) + workSchema + '.' + description.substring(descrIndex);
+                }
+            }
+//            int bodyIndex = upperedBody.indexOf(dependency.getName());
+//            if (bodyIndex > 0) {
+//                if (upperedBody.charAt(bodyIndex - 1) != '.') {
+//                    upperedBody = upperedBody.substring(0, bodyIndex) + workSchema + '.' + upperedBody.substring(bodyIndex);
+//                    body = body.substring(0, bodyIndex) + workSchema + '.' + body.substring(bodyIndex);
+//                }
+//            }
+        }
+        StringBuilder triggerBody = new StringBuilder();
+        if (!upperedDescr.startsWith(workSchema)) {
+            triggerBody.append(workSchema).append('.');
+        }
+        triggerBody.append(description);
+        if (!StringUtils.isEmpty(whenClause)) {
+            triggerBody.append(" WHEN (").append(whenClause.trim()).append(')');
+        }
+        triggerBody.append('\n').append(body);
+        return triggerBody.toString();
     }
 }
