@@ -21,27 +21,31 @@ import java.util.Map;
  */
 public class SqlTableSerializer implements TableSerializer {
 
-    private final Schema schema;
-    private final Dialect dialect;
-    private final DumpOptions options;
-    private final Charset charset;
-
-    public SqlTableSerializer(Schema schema, DumpOptions options) {
-        this.schema = schema;
-        this.dialect = schema.getDialect();
-        this.options = options;
-        this.charset = options.getCharset() == null ? DumpActionConfigurer.DEFAULT_CHARSET : options.getCharset();
+    @Override
+    public void serialize(Table table, Schema schema, OutputStream output, DumpOptions options) throws IOException {
+        Charset charset = options.getCharset() == null ? DumpActionConfigurer.DEFAULT_CHARSET : options.getCharset();
+        Dialect dialect = schema.getDialect();
+        if (options.isDumpDdl()) {
+            serializeTable(table, dialect, output, charset);
+            if (options.isDumpDml()) {
+                output.write('\n');
+                serializeRows(table, schema, output, options);
+            }
+            serializeTableObjects(table, dialect, output, charset);
+            serializeAnalyze(table, dialect, output, charset);
+        } else if (options.isDumpDml()) {
+            serializeRows(table, schema, output, options);
+            serializeAnalyze(table, dialect, output, charset);
+        }
     }
 
-    @Override
-    public void serializeTable(Table table, OutputStream output) throws IOException {
+    private void serializeTable(Table table, Dialect dialect, OutputStream output, Charset charset) throws IOException {
         output.write(dialect.createTableQuery(table).getBytes(charset));
         output.write(';');
         output.write('\n');
     }
 
-    @Override
-    public void serializeTableObjects(Table table, OutputStream output) throws IOException {
+    private void serializeTableObjects(Table table, Dialect dialect, OutputStream output, Charset charset) throws IOException {
         if (table.getPrimaryKey() != null) {
             output.write('\n');
             output.write(dialect.createPrimaryKeyQuery(table.getPrimaryKey()).getBytes(charset));
@@ -91,11 +95,11 @@ public class SqlTableSerializer implements TableSerializer {
         }
     }
 
-    @Override
-    public void serializeRows(Table table, OutputStream output) throws IOException {
+    private void serializeRows(Table table, Schema schema, OutputStream output, DumpOptions options) throws IOException {
         try (TableRowExtractor rowExtractor = schema.getRows(table)) {
             rowExtractor.setVerboseEach(options.getVerboseEach());
 
+            final Dialect dialect = schema.getDialect();
             final long commitEach = options.getCommitEach();
             final Charset charset = options.getCharset();
 
@@ -123,8 +127,7 @@ public class SqlTableSerializer implements TableSerializer {
         }
     }
 
-    @Override
-    public void serializeAnalyze(Table table, OutputStream output) throws IOException {
+    private void serializeAnalyze(Table table, Dialect dialect, OutputStream output, Charset charset) throws IOException {
         output.write('\n');
         output.write(dialect.analyzeTableQuery(table).getBytes(charset));
         output.write('\n');

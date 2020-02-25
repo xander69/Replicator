@@ -1,10 +1,15 @@
 package ru.xander.replicator.schema;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * @author Alexander Shakhov
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Sequence {
 
+    @JsonBackReference
     private Table table;
     private String schema;
     private String name;

@@ -1,9 +1,13 @@
 package ru.xander.replicator.schema;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 /**
  * @author Alexander Shakhov
  */
 public abstract class Constraint {
+
+    @JsonBackReference
     private Table table;
     private String name;
     private String columnName;

@@ -2,6 +2,7 @@ package ru.xander.replicator.action;
 
 import ru.xander.replicator.dump.DumpOptions;
 import ru.xander.replicator.dump.DumpType;
+import ru.xander.replicator.dump.JsonTableSerializer;
 import ru.xander.replicator.dump.SqlTableSerializer;
 import ru.xander.replicator.dump.TableSerializer;
 import ru.xander.replicator.exception.ReplicatorException;
@@ -10,7 +11,6 @@ import ru.xander.replicator.schema.SchemaConfig;
 import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.Table;
 
-import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Objects;
 
@@ -52,33 +52,20 @@ public class DumpAction implements Action {
         TableSerializer tableSerializer;
         switch (dumpType) {
             case SQL:
-                tableSerializer = new SqlTableSerializer(schema, options);
+                tableSerializer = new SqlTableSerializer();
                 break;
             case JSON:
+                tableSerializer = new JsonTableSerializer();
+                break;
             case XML:
             default:
                 throw new ReplicatorException("Unsupported dump type <" + dumpType + ">");
         }
         try {
-            serializeTable(table, tableSerializer);
+            tableSerializer.serialize(table, schema, output, options);
         } catch (Exception e) {
             String errorMessage = "Failed to dump table " + tableName + ": " + e.getMessage();
             throw new ReplicatorException(errorMessage, e);
-        }
-    }
-
-    private void serializeTable(Table table, TableSerializer tableSerializer) throws IOException {
-        if (options.isDumpDdl()) {
-            tableSerializer.serializeTable(table, output);
-            if (options.isDumpDml()) {
-                output.write('\n');
-                tableSerializer.serializeRows(table, output);
-            }
-            tableSerializer.serializeTableObjects(table, output);
-            tableSerializer.serializeAnalyze(table, output);
-        } else if (options.isDumpDml()) {
-            tableSerializer.serializeRows(table, output);
-            tableSerializer.serializeAnalyze(table, output);
         }
     }
 }

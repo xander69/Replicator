@@ -124,10 +124,7 @@ public class ReplicateAction implements Action {
         if (sequence != null) {
             target.createSequence(sequence);
         }
-        // Триггеры создаем только на идентичных схемах
-        if (table.getVendorType() == target.getVendorType()) {
-            table.getTriggers().forEach(target::createTrigger);
-        }
+        table.getTriggers().forEach(target::createTrigger);
         target.analyzeTable(table);
     }
 

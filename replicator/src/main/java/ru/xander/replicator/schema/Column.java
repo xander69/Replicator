@@ -1,5 +1,7 @@
 package ru.xander.replicator.schema;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import ru.xander.replicator.util.StringUtils;
 
 import java.util.HashSet;
@@ -8,8 +10,10 @@ import java.util.Set;
 /**
  * @author Alexander Shakhov
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Column implements Comparable<Column> {
 
+    @JsonBackReference
     private Table table;
     private int number;
     private String name;

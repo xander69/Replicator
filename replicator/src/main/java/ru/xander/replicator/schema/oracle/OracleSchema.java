@@ -190,6 +190,10 @@ public class OracleSchema extends AbstractSchema {
 
     @Override
     public void createTrigger(Trigger trigger) {
+        if (trigger.getVendorType() != VendorType.ORACLE) {
+            warning("Vendor type for " + trigger.getName() + " is not Oracle");
+            return;
+        }
         if (isObjectExists(trigger.getName(), "TRIGGER")) {
             warning("Trigger " + trigger.getName() + " already exists");
             return;
@@ -267,7 +271,6 @@ public class OracleSchema extends AbstractSchema {
                     table.setSchema(rs.getString("owner"));
                     table.setName(rs.getString("table_name"));
                     table.setComment(rs.getString("comments"));
-                    table.setVendorType(getVendorType());
                     return table;
                 });
     }
@@ -401,6 +404,7 @@ public class OracleSchema extends AbstractSchema {
             String body = dialect.prepareTriggerBody(dependencies, description, whenClause, triggerBody);
             trigger.setBody("CREATE OR REPLACE TRIGGER " + body);
             trigger.setEnabled(enabled);
+            trigger.setVendorType(VendorType.ORACLE);
             table.addTrigger(trigger);
         });
     }

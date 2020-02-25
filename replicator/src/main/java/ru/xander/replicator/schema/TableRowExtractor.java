@@ -1,5 +1,6 @@
 package ru.xander.replicator.schema;
 
+import ru.xander.replicator.action.DumpActionConfigurer;
 import ru.xander.replicator.exception.SchemaException;
 import ru.xander.replicator.listener.Listener;
 import ru.xander.replicator.listener.Progress;
@@ -28,10 +29,15 @@ public class TableRowExtractor implements AutoCloseable {
         this.totalRows = totalRows;
         this.ps = ps;
         this.listener = listener;
+        this.verboseEach = DumpActionConfigurer.DEFAULT_VERBOSE_EACH;
     }
 
     public void setVerboseEach(long verboseEach) {
-        this.verboseEach = verboseEach;
+        if (verboseEach <= 0) {
+            this.verboseEach = DumpActionConfigurer.DEFAULT_VERBOSE_EACH;
+        } else {
+            this.verboseEach = verboseEach;
+        }
     }
 
     public Map<String, Object> nextRow() {
@@ -76,7 +82,7 @@ public class TableRowExtractor implements AutoCloseable {
         }
         if (listener != null) {
             Progress progress = new Progress();
-            progress.setMessage("Extract rows for table "); //TODO: подцепить имя таблицы
+            progress.setMessage("Extract rows for table <..>"); //TODO: подцепить имя таблицы
             progress.setValue(currentRow);
             progress.setTotal(totalRows);
             listener.progress(progress);
