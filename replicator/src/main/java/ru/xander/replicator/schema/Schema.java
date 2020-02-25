@@ -61,8 +61,6 @@ public interface Schema {
 
     void analyzeTable(Table table);
 
-    TableRowExtractor getRows(Table table);
-
     BatchExecutor createBatchExecutor();
 
 }

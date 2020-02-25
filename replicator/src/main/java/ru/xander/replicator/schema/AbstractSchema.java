@@ -40,21 +40,7 @@ public abstract class AbstractSchema implements Schema {
         }
     }
 
-    @SuppressWarnings("SqlDialectInspection")
-    protected long selectCount(String sql) {
-        String countSql = "SELECT COUNT(*) AS C\nFROM\n(\n" + sql + "\n)";
-        try (
-                Statement statement = connection.createStatement();
-                ResultSet resultSet = statement.executeQuery(countSql)
-        ) {
-            if (resultSet.next()) {
-                return resultSet.getLong("C");
-            }
-            return 0L;
-        } catch (Exception e) {
-            throw new QueryFailedException(countSql, e);
-        }
-    }
+
 
     protected void select(String sql, DataSetMapper mapper) {
         try (

@@ -40,8 +40,16 @@ public class SchemaConnection implements AutoCloseable {
         }
     }
 
+    public Connection getConnection() {
+        return connection;
+    }
+
     public Schema getSchema() {
         return schema;
+    }
+
+    public Listener getListener() {
+        return listener;
     }
 
     @Override

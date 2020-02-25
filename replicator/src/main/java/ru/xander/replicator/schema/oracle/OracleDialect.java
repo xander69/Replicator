@@ -1,5 +1,7 @@
 package ru.xander.replicator.schema.oracle;
 
+import ru.xander.replicator.dump.data.TableField;
+import ru.xander.replicator.dump.data.TableRow;
 import ru.xander.replicator.exception.SchemaException;
 import ru.xander.replicator.filter.Filter;
 import ru.xander.replicator.filter.FilterType;
@@ -26,9 +28,9 @@ import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -455,28 +457,25 @@ class OracleDialect implements Dialect {
     }
 
     @Override
-    public String insertQuery(Table table, Map<String, Object> values) {
+    public String insertQuery(TableRow row) {
         //TODO: не поддерживаются BLOB-поля
-        return "INSERT INTO " + getQualifiedName(table) +
+        return "INSERT INTO " + getQualifiedName(row.getTable()) +
                 " (" +
-                table.getColumns()
-                        .stream()
-                        .filter(c -> c.getColumnType() != ColumnType.BLOB)
-                        .sorted()
-                        .map(Column::getName)
+                Arrays.stream(row.getFields())
+                        .filter(field -> field.getColumn().getColumnType() != ColumnType.BLOB)
+//                        .sorted()
+                        .map(field -> field.getColumn().getName())
                         .collect(Collectors.joining(", ")) + ")\n" +
                 "VALUES (" +
-                table.getColumns()
-                        .stream()
-                        .filter(c -> c.getColumnType() != ColumnType.BLOB)
-                        .map(c -> {
-                            Object value = values.get(c.getName());
-                            return formatValue(value, c);
-                        })
+                Arrays.stream(row.getFields())
+                        .filter(field -> field.getColumn().getColumnType() != ColumnType.BLOB)
+//                        .sorted()
+                        .map(OracleDialect::formatValue)
                         .collect(Collectors.joining(", ")) + ')';
     }
 
-    String selectQuery(Table table) {
+    @Override
+    public String selectQuery(Table table) {
         return "SELECT " +
                 table.getColumns()
                         .stream()
@@ -565,10 +564,12 @@ class OracleDialect implements Dialect {
         }
     }
 
-    private static String formatValue(Object value, Column column) {
+    private static String formatValue(TableField field) {
+        Object value = field.getValue();
         if (value == null) {
             return "NULL";
         }
+        Column column = field.getColumn();
         switch (column.getColumnType()) {
             case CHAR:
             case STRING:

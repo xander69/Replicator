@@ -3,8 +3,8 @@ package ru.xander.replicator.dump;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import ru.xander.replicator.dump.data.TableRowExtractor;
 import ru.xander.replicator.schema.Table;
-import ru.xander.replicator.schema.TableRowExtractor;
 
 /**
  * @author Alexander Shakhov

@@ -1,6 +1,6 @@
 package ru.xander.replicator.schema;
 
-import java.util.Map;
+import ru.xander.replicator.dump.data.TableRow;
 
 /**
  * @author Alexander Shakhov
@@ -56,7 +56,9 @@ public interface Dialect {
         return "COMMIT";
     }
 
+    String selectQuery(Table table);
+
     String insertQuery(Table table);
 
-    String insertQuery(Table table, Map<String, Object> values);
+    String insertQuery(TableRow row);
 }

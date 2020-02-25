@@ -1,20 +1,20 @@
 package ru.xander.replicator.dump;
 
 import ru.xander.replicator.action.DumpActionConfigurer;
+import ru.xander.replicator.dump.data.TableRow;
+import ru.xander.replicator.dump.data.TableRowExtractor;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Dialect;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
-import ru.xander.replicator.schema.Schema;
+import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.Table;
-import ru.xander.replicator.schema.TableRowExtractor;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.util.StringUtils;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
-import java.util.Map;
 
 /**
  * @author Alexander Shakhov
@@ -22,19 +22,19 @@ import java.util.Map;
 public class SqlTableSerializer implements TableSerializer {
 
     @Override
-    public void serialize(Table table, Schema schema, OutputStream output, DumpOptions options) throws IOException {
+    public void serialize(Table table, SchemaConnection schemaConnection, OutputStream output, DumpOptions options) throws IOException {
         Charset charset = options.getCharset() == null ? DumpActionConfigurer.DEFAULT_CHARSET : options.getCharset();
-        Dialect dialect = schema.getDialect();
+        Dialect dialect = schemaConnection.getSchema().getDialect();
         if (options.isDumpDdl()) {
             serializeTable(table, dialect, output, charset);
             if (options.isDumpDml()) {
                 output.write('\n');
-                serializeRows(table, schema, output, options);
+                serializeRows(table, schemaConnection, output, options);
             }
             serializeTableObjects(table, dialect, output, charset);
             serializeAnalyze(table, dialect, output, charset);
         } else if (options.isDumpDml()) {
-            serializeRows(table, schema, output, options);
+            serializeRows(table, schemaConnection, output, options);
             serializeAnalyze(table, dialect, output, charset);
         }
     }
@@ -95,18 +95,18 @@ public class SqlTableSerializer implements TableSerializer {
         }
     }
 
-    private void serializeRows(Table table, Schema schema, OutputStream output, DumpOptions options) throws IOException {
-        try (TableRowExtractor rowExtractor = schema.getRows(table)) {
+    private void serializeRows(Table table, SchemaConnection schemaConnection, OutputStream output, DumpOptions options) throws IOException {
+        try (TableRowExtractor rowExtractor = new TableRowExtractor(schemaConnection, table)) {
             rowExtractor.setVerboseEach(options.getVerboseEach());
 
-            final Dialect dialect = schema.getDialect();
+            final Dialect dialect = schemaConnection.getSchema().getDialect();
             final long commitEach = options.getCommitEach();
             final Charset charset = options.getCharset();
 
             long currentRow = 0;
-            Map<String, Object> row;
+            TableRow row;
             while ((row = rowExtractor.nextRow()) != null) {
-                String insertQuery = dialect.insertQuery(table, row);
+                String insertQuery = dialect.insertQuery(row);
                 output.write(insertQuery.getBytes(charset));
                 output.write(';');
                 output.write('\n');

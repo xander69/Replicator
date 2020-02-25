@@ -1,6 +1,5 @@
 package ru.xander.replicator.schema.oracle;
 
-import ru.xander.replicator.exception.SchemaException;
 import ru.xander.replicator.filter.Filter;
 import ru.xander.replicator.listener.AlterType;
 import ru.xander.replicator.listener.Listener;
@@ -17,7 +16,6 @@ import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
-import ru.xander.replicator.schema.TableRowExtractor;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.schema.VendorType;
 
@@ -241,19 +239,6 @@ public class OracleSchema extends AbstractSchema {
         String sql = dialect.analyzeTableQuery(table);
         alter(ANALYZE_TABLE, table.getName(), sql);
         execute(sql);
-    }
-
-    @Override
-    public TableRowExtractor getRows(Table table) {
-        notify("Get DML for table " + table.getName());
-        try {
-            String selectQuery = dialect.selectQuery(table);
-            long totalRows = selectCount(selectQuery);
-            return new TableRowExtractor(totalRows, connection.prepareStatement(selectQuery), listener);
-        } catch (Exception e) {
-            String errorMessage = "Cannot get dml, cause by: " + e.getMessage();
-            throw new SchemaException(errorMessage, e);
-        }
     }
 
     private List<String> findTables(List<Filter> filterList) {

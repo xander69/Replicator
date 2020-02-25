@@ -1,15 +1,17 @@
 package ru.xander.replicator.dump;
 
 import ru.xander.replicator.action.DumpActionConfigurer;
+import ru.xander.replicator.dump.data.TableField;
+import ru.xander.replicator.dump.data.TableRow;
+import ru.xander.replicator.dump.data.TableRowExtractor;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.PrimaryKey;
-import ru.xander.replicator.schema.Schema;
+import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
-import ru.xander.replicator.schema.TableRowExtractor;
 import ru.xander.replicator.schema.Trigger;
 
 import javax.xml.stream.XMLOutputFactory;
@@ -21,7 +23,6 @@ import java.nio.charset.Charset;
 import java.sql.Blob;
 import java.util.Collection;
 import java.util.Date;
-import java.util.Map;
 
 /**
  * @author Alexander Shakhov
@@ -31,7 +32,7 @@ public class XmlTableSerializer implements TableSerializer {
     private Indenter indenter;
 
     @Override
-    public void serialize(Table table, Schema schema, OutputStream output, DumpOptions options) throws IOException {
+    public void serialize(Table table, SchemaConnection schemaConnection, OutputStream output, DumpOptions options) throws IOException {
         Charset charset = options.getCharset() == null ? DumpActionConfigurer.DEFAULT_CHARSET : options.getCharset();
         try {
             XMLOutputFactory xmlFactory = XMLOutputFactory.newInstance();
@@ -46,7 +47,7 @@ public class XmlTableSerializer implements TableSerializer {
                 writeTable(writer, table);
             }
             if (options.isDumpDml()) {
-                writeRows(writer, table, schema);
+                writeRows(writer, table, schemaConnection);
             }
             writer.writeEndElement();
 
@@ -76,29 +77,39 @@ public class XmlTableSerializer implements TableSerializer {
         writer.writeEndElement();
     }
 
-    private void writeRows(XMLStreamWriter writer, Table table, Schema schema) throws XMLStreamException {
-        try (TableRowExtractor rowExtractor = schema.getRows(table)) {
+    private void writeRows(XMLStreamWriter writer, Table table, SchemaConnection schemaConnection) throws XMLStreamException {
+        try (TableRowExtractor rowExtractor = new TableRowExtractor(schemaConnection, table)) {
             indenter.write(1);
             writer.writeStartElement("rows");
-            Map<String, Object> row;
+            TableRow row;
             while ((row = rowExtractor.nextRow()) != null) {
                 indenter.write(2);
                 writer.writeStartElement("row");
-                for (Map.Entry<String, Object> field : row.entrySet()) {
+                for (TableField field : row.getFields()) {
                     indenter.write(3);
                     writer.writeStartElement("field");
-                    writer.writeAttribute("name", field.getKey());
+                    writer.writeAttribute("name", field.getColumn().getName());
+                    writer.writeAttribute("type", String.valueOf(field.getColumn().getColumnType()));
                     Object value = field.getValue();
                     if (value == null) {
                         writer.writeCharacters("null");
-                    } else if (value instanceof Date) {
-                        writer.writeCharacters(DumpUtils.dateToString((Date) value));
-                    } else if (value instanceof Blob) {
-                        writer.writeCharacters(DumpUtils.blobToBase64((Blob) value));
-                    } else if (value instanceof String) {
-                        writer.writeCData((String) value);
                     } else {
-                        writer.writeCharacters(String.valueOf(value));
+                        switch (field.getColumn().getColumnType()) {
+                            case STRING:
+                            case CLOB:
+                                writer.writeCData((String) value);
+                                break;
+                            case DATE:
+                            case TIMESTAMP:
+                                writer.writeCharacters(DumpUtils.dateToString((Date) value));
+                                break;
+                            case BLOB:
+                                writer.writeCharacters(DumpUtils.blobToBase64((Blob) value));
+                                break;
+                            default:
+                                writer.writeCharacters(String.valueOf(value));
+                                break;
+                        }
                     }
                     writer.writeEndElement();
                 }
