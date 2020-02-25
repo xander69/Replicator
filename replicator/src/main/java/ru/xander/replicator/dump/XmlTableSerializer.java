@@ -95,6 +95,7 @@ public class XmlTableSerializer implements TableSerializer {
                         writer.writeCharacters("null");
                     } else {
                         switch (field.getColumn().getColumnType()) {
+                            case CHAR:
                             case STRING:
                             case CLOB:
                                 writer.writeCData((String) value);

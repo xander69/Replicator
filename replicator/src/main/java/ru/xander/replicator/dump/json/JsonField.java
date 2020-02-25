@@ -1,4 +1,4 @@
-package ru.xander.replicator.dump;
+package ru.xander.replicator.dump.json;
 
 import ru.xander.replicator.schema.ColumnType;
 

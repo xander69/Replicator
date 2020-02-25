@@ -2,7 +2,9 @@ package ru.xander.replicator.dump;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.util.StdDateFormat;
 import ru.xander.replicator.dump.data.TableRowExtractor;
+import ru.xander.replicator.dump.json.JsonDump;
 import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.Table;
 
@@ -17,17 +19,18 @@ public class JsonTableSerializer implements TableSerializer {
     public void serialize(Table table, SchemaConnection schemaConnection, OutputStream output, DumpOptions options) throws IOException {
         try (TableRowExtractor rowExtractor = new TableRowExtractor(schemaConnection, table)) {
             ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.setDateFormat(new StdDateFormat().withColonInTimeZone(true));
             if (options.isFormat()) {
                 objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
             }
-            JsonDumpContainer dumpContainer = new JsonDumpContainer();
+            JsonDump dump = new JsonDump();
             if (options.isDumpDdl()) {
-                dumpContainer.setTable(table);
+                dump.setTable(table);
             }
             if (options.isDumpDml()) {
-                dumpContainer.setRowExtractor(rowExtractor);
+                dump.setRowExtractor(rowExtractor);
             }
-            objectMapper.writeValue(output, dumpContainer);
+            objectMapper.writeValue(output, dump);
         }
     }
 }

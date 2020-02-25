@@ -42,6 +42,7 @@ abstract class OracleType {
             case BOOLEAN:
             case INTEGER:
             case DECIMAL:
+            case SERIAL:
                 return "NUMBER";
             case CHAR:
                 return "CHAR";

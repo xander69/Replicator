@@ -1,6 +1,5 @@
-package ru.xander.replicator.dump;
+package ru.xander.replicator.dump.json;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import ru.xander.replicator.dump.data.TableRowExtractor;
@@ -9,12 +8,13 @@ import ru.xander.replicator.schema.Table;
 /**
  * @author Alexander Shakhov
  */
-@JsonIgnoreProperties(ignoreUnknown = true)
-public class JsonDumpContainer {
+public class JsonDump {
 
+    @JsonProperty("table")
+    @JsonSerialize(using = TableSerializer.class)
     private Table table;
     @JsonProperty("rows")
-    @JsonSerialize(using = JsonRowsSerializer.class)
+    @JsonSerialize(using = RowsSerializer.class)
     private TableRowExtractor rowExtractor;
 
     public Table getTable() {
