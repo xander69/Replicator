@@ -8,7 +8,7 @@ public class ImportedKey extends Constraint {
     private String pkTableSchema;
     private String pkTableName;
     private String pkName;
-    private String pkColumnName;
+    private String[] pkColumns;
 
     public String getPkTableSchema() {
         return pkTableSchema;
@@ -34,11 +34,11 @@ public class ImportedKey extends Constraint {
         this.pkName = pkName;
     }
 
-    public String getPkColumnName() {
-        return pkColumnName;
+    public String[] getPkColumns() {
+        return pkColumns;
     }
 
-    public void setPkColumnName(String pkColumnName) {
-        this.pkColumnName = pkColumnName;
+    public void setPkColumns(String[] pkColumns) {
+        this.pkColumns = pkColumns;
     }
 }

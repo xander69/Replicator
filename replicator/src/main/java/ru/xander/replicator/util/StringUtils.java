@@ -5,7 +5,14 @@ import java.util.Objects;
 /**
  * @author Alexander Shakhov
  */
-public class StringUtils {
+public abstract class StringUtils {
+
+    private static final String COLUMNS_DELIMITER = ",";
+
+    private StringUtils() {
+        throw new IllegalStateException("Utility class");
+    }
+
     public static boolean isEmpty(String str) {
         return (str == null) || str.isEmpty();
     }
@@ -19,6 +26,27 @@ public class StringUtils {
             s2 = s2.replace('\n', ' ').trim();
         }
         return Objects.equals(s1, s2);
+    }
+
+    public static String[] splitColumns(String columns) {
+        String[] array = columns.split(COLUMNS_DELIMITER);
+        for (int i = 0; i < array.length; i++) {
+            array[i] = array[i].trim();
+        }
+        return array;
+    }
+
+    public static String joinColumns(String[] columns) {
+        return String.join(COLUMNS_DELIMITER, columns);
+    }
+
+    public static boolean arrayContains(String[] array, String str) {
+        for (String s : array) {
+            if (s.equals(str)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static String repeat(char c, int count) {

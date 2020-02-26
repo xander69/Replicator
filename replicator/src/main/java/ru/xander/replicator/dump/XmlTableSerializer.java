@@ -13,6 +13,7 @@ import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
+import ru.xander.replicator.util.StringUtils;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
@@ -149,7 +150,7 @@ public class XmlTableSerializer implements TableSerializer {
         indenter.write(2);
         writer.writeStartElement("primaryKey");
         writer.writeAttribute("name", primaryKey.getName());
-        writer.writeAttribute("columnName", primaryKey.getColumnName());
+        writer.writeAttribute("columns", StringUtils.joinColumns(primaryKey.getColumns()));
         writer.writeAttribute("enabled", String.valueOf(primaryKey.getEnabled()));
         writer.writeEndElement();
     }
@@ -164,12 +165,12 @@ public class XmlTableSerializer implements TableSerializer {
             indenter.write(3);
             writer.writeStartElement("importedKey");
             writer.writeAttribute("name", importedKey.getName());
-            writer.writeAttribute("columnName", importedKey.getColumnName());
+            writer.writeAttribute("columns", StringUtils.joinColumns(importedKey.getColumns()));
             writer.writeAttribute("enabled", String.valueOf(importedKey.getEnabled()));
             writer.writeAttribute("pkName", importedKey.getPkName());
             writer.writeAttribute("pkTableSchema", importedKey.getPkTableSchema());
             writer.writeAttribute("pkTableName", importedKey.getPkTableName());
-            writer.writeAttribute("pkColumnName", importedKey.getPkColumnName());
+            writer.writeAttribute("pkColumns", StringUtils.joinColumns(importedKey.getPkColumns()));
             writer.writeEndElement();
         }
         indenter.write(2);
@@ -186,7 +187,7 @@ public class XmlTableSerializer implements TableSerializer {
             indenter.write(3);
             writer.writeStartElement("checkConstraint");
             writer.writeAttribute("name", checkConstraint.getName());
-            writer.writeAttribute("columnName", checkConstraint.getColumnName());
+            writer.writeAttribute("columns", StringUtils.joinColumns(checkConstraint.getColumns()));
             writer.writeAttribute("enabled", String.valueOf(checkConstraint.getEnabled()));
             writer.writeCData(checkConstraint.getCondition());
             writer.writeEndElement();
@@ -206,7 +207,7 @@ public class XmlTableSerializer implements TableSerializer {
             writer.writeStartElement("index");
             writer.writeAttribute("name", index.getName());
             writer.writeAttribute("type", String.valueOf(index.getType()));
-            writer.writeAttribute("columns", String.join(",", index.getColumns()));
+            writer.writeAttribute("columns", StringUtils.joinColumns(index.getColumns()));
             writer.writeAttribute("enabled", String.valueOf(index.getEnabled()));
             writer.writeEndElement();
         }

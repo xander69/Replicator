@@ -18,6 +18,7 @@ import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.schema.VendorType;
+import ru.xander.replicator.util.StringUtils;
 
 import java.sql.Connection;
 import java.util.LinkedList;
@@ -288,7 +289,7 @@ public class HsqldbSchema extends AbstractSchema {
                     PrimaryKey primaryKey = new PrimaryKey();
                     primaryKey.setTable(table);
                     primaryKey.setName(rs.getString("CONSTRAINT_NAME"));
-                    primaryKey.setColumnName(rs.getString("COLUMN_NAME"));
+                    primaryKey.setColumns(StringUtils.splitColumns(rs.getString("COLUMN_NAME")));
                     primaryKey.setEnabled(true);
                     table.setPrimaryKey(primaryKey);
                     break;
@@ -296,19 +297,19 @@ public class HsqldbSchema extends AbstractSchema {
                     ImportedKey importedKey = new ImportedKey();
                     importedKey.setTable(table);
                     importedKey.setName(rs.getString("CONSTRAINT_NAME"));
-                    importedKey.setColumnName(rs.getString("COLUMN_NAME"));
+                    importedKey.setColumns(StringUtils.splitColumns(rs.getString("COLUMN_NAME")));
                     importedKey.setEnabled(true);
                     importedKey.setPkTableSchema(rs.getString("R_TABLE_SCHEM"));
                     importedKey.setPkTableName(rs.getString("R_TABLE_NAME"));
                     importedKey.setPkName(rs.getString("R_CONSTRAINT_NAME"));
-                    importedKey.setPkColumnName(rs.getString("R_COLUMN_NAME"));
+                    importedKey.setPkColumns(StringUtils.splitColumns(rs.getString("R_COLUMN_NAME")));
                     table.addImportedKey(importedKey);
                     break;
                 case "CHECK CONSTRAINT":
                     CheckConstraint checkConstraint = new CheckConstraint();
                     checkConstraint.setTable(table);
                     checkConstraint.setName(rs.getString("CONSTRAINT_NAME"));
-                    checkConstraint.setColumnName(rs.getString("COLUMN_NAME"));
+                    checkConstraint.setColumns(StringUtils.splitColumns(rs.getString("COLUMN_NAME")));
                     checkConstraint.setEnabled(true);
                     checkConstraint.setCondition(rs.getString("CONDITION"));
                     table.addCheckConstraint(checkConstraint);
@@ -317,12 +318,12 @@ public class HsqldbSchema extends AbstractSchema {
                     ExportedKey exportedKey = new ExportedKey();
                     exportedKey.setTable(table);
                     exportedKey.setName(rs.getString("R_CONSTRAINT_NAME"));
-                    exportedKey.setColumnName(rs.getString("R_COLUMN_NAME"));
+                    exportedKey.setColumns(StringUtils.splitColumns(rs.getString("R_COLUMN_NAME")));
                     exportedKey.setEnabled(true);
                     exportedKey.setFkTableSchema(rs.getString("TABLE_SCHEMA"));
                     exportedKey.setFkTableName(rs.getString("TABLE_NAME"));
                     exportedKey.setFkName(rs.getString("CONSTRAINT_NAME"));
-                    exportedKey.setFkColumnName(rs.getString("COLUMN_NAME"));
+                    exportedKey.setFkColumns(StringUtils.splitColumns(rs.getString("COLUMN_NAME")));
                     table.addExportedKey(exportedKey);
                     break;
             }

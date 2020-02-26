@@ -7,7 +7,7 @@ public abstract class Constraint {
 
     private Table table;
     private String name;
-    private String columnName;
+    private String[] columns;
     private Boolean enabled;
 
     public Table getTable() {
@@ -26,12 +26,12 @@ public abstract class Constraint {
         this.name = name;
     }
 
-    public String getColumnName() {
-        return columnName;
+    public String[] getColumns() {
+        return columns;
     }
 
-    public void setColumnName(String columnName) {
-        this.columnName = columnName;
+    public void setColumns(String[] columns) {
+        this.columns = columns;
     }
 
     public Boolean getEnabled() {

@@ -19,6 +19,7 @@ import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.util.StringUtils;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -207,11 +208,11 @@ public class CompareAction implements Action {
                     targetPrimaryKey.getName(),
                     dialect -> dialect.renameConstraintQuery(targetPrimaryKey, sourcePrimaryKey.getName()));
         }
-        if (!Objects.equals(sourcePrimaryKey.getColumnName(), targetPrimaryKey.getColumnName())) {
+        if (!Arrays.equals(sourcePrimaryKey.getColumns(), targetPrimaryKey.getColumns())) {
             diffCollector.add(
-                    CompareKind.PRIMARY_KEY_COLUMN,
-                    sourcePrimaryKey.getColumnName(),
-                    targetPrimaryKey.getColumnName(),
+                    CompareKind.PRIMARY_KEY_COLUMNS,
+                    StringUtils.joinColumns(sourcePrimaryKey.getColumns()),
+                    StringUtils.joinColumns(targetPrimaryKey.getColumns()),
                     // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
                     dialect -> dialect.dropPrimaryKeyQuery(targetPrimaryKey) + "\n" + dialect.createPrimaryKeyQuery(sourcePrimaryKey));
         }
@@ -229,11 +230,11 @@ public class CompareAction implements Action {
                         null,
                         dialect -> dialect.createImportedKeyQuery(sourceImportedKey));
             } else {
-                if (!Objects.equals(sourceImportedKey.getColumnName(), targetImportedKey.getColumnName())) {
+                if (!Arrays.equals(sourceImportedKey.getColumns(), targetImportedKey.getColumns())) {
                     diffCollector.add(
-                            CompareKind.IMPORTED_KEY_COLUMN,
-                            sourceImportedKey.getColumnName(),
-                            targetImportedKey.getColumnName(),
+                            CompareKind.IMPORTED_KEY_COLUMNS,
+                            StringUtils.joinColumns(sourceImportedKey.getColumns()),
+                            StringUtils.joinColumns(targetImportedKey.getColumns()),
                             // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
                             dialect -> dialect.dropConstraintQuery(targetImportedKey) + "\n" + dialect.createImportedKeyQuery(sourceImportedKey));
                 }
@@ -253,11 +254,11 @@ public class CompareAction implements Action {
                             // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
                             dialect -> dialect.dropConstraintQuery(targetImportedKey) + "\n" + dialect.createImportedKeyQuery(sourceImportedKey));
                 }
-                if (!Objects.equals(sourceImportedKey.getPkColumnName(), targetImportedKey.getPkColumnName())) {
+                if (!Arrays.equals(sourceImportedKey.getPkColumns(), targetImportedKey.getPkColumns())) {
                     diffCollector.add(
-                            CompareKind.IMPORTED_KEY_PK_COLUMN,
-                            sourceImportedKey.getPkColumnName(),
-                            targetImportedKey.getPkColumnName(),
+                            CompareKind.IMPORTED_KEY_PK_COLUMNS,
+                            StringUtils.joinColumns(sourceImportedKey.getPkColumns()),
+                            StringUtils.joinColumns(targetImportedKey.getPkColumns()),
                             // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
                             dialect -> dialect.dropConstraintQuery(targetImportedKey) + "\n" + dialect.createImportedKeyQuery(sourceImportedKey));
                 }
@@ -286,11 +287,19 @@ public class CompareAction implements Action {
                         null,
                         dialect -> dialect.createCheckConstraintQuery(sourceCheckConstraint));
             } else {
+                if (!Arrays.equals(sourceCheckConstraint.getColumns(), targetCheckConstraint.getColumns())) {
+                    diffCollector.add(
+                            CompareKind.CHECK_CONSTRAINT_COLUMNS,
+                            StringUtils.joinColumns(sourceCheckConstraint.getColumns()),
+                            StringUtils.joinColumns(targetCheckConstraint.getColumns()),
+                            // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
+                            dialect -> dialect.dropConstraintQuery(targetCheckConstraint) + "\n" + dialect.createCheckConstraintQuery(sourceCheckConstraint));
+                }
                 if (!Objects.equals(sourceCheckConstraint.getCondition(), targetCheckConstraint.getCondition())) {
                     diffCollector.add(
                             CompareKind.CHECK_CONSTRAINT_CONDITION,
-                            sourceCheckConstraint.getColumnName(),
-                            targetCheckConstraint.getColumnName(),
+                            sourceCheckConstraint.getCondition(),
+                            targetCheckConstraint.getCondition(),
                             // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
                             dialect -> dialect.dropConstraintQuery(targetCheckConstraint) + "\n" + dialect.createCheckConstraintQuery(sourceCheckConstraint));
                 }
@@ -327,11 +336,11 @@ public class CompareAction implements Action {
                             // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
                             dialect -> dialect.dropIndexQuery(targetIndex) + "\n" + dialect.createIndexQuery(sourceIndex));
                 }
-                if (!Objects.equals(sourceIndex.getColumns(), targetIndex.getColumns())) {
+                if (!Arrays.equals(sourceIndex.getColumns(), targetIndex.getColumns())) {
                     diffCollector.add(
                             CompareKind.INDEX_COLUMNS,
-                            String.join(", ", sourceIndex.getColumns()),
-                            String.join(", ", targetIndex.getColumns()),
+                            StringUtils.joinColumns(sourceIndex.getColumns()),
+                            StringUtils.joinColumns(targetIndex.getColumns()),
                             // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
                             dialect -> dialect.dropIndexQuery(targetIndex) + "\n" + dialect.createIndexQuery(sourceIndex));
                 }

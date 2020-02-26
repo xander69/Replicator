@@ -75,6 +75,7 @@ final class OracleSchemaQueries {
     }
 
     String selectConstraints(Table table) {
+        //TODO: предусмотреть выборку нескольких столбцов на констрейнт
         return "SELECT\n" +
                 "  C.OWNER,\n" +
                 "  C.TABLE_NAME,\n" +

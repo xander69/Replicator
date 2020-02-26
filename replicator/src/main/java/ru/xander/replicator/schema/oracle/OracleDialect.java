@@ -102,7 +102,7 @@ class OracleDialect extends AbstractDialect {
     @Override
     public String createPrimaryKeyQuery(PrimaryKey primaryKey) {
         return "ALTER TABLE " + getQualifiedName(primaryKey.getTable())
-                + " ADD CONSTRAINT " + primaryKey.getName() + " PRIMARY KEY (" + primaryKey.getColumnName() + ')';
+                + " ADD CONSTRAINT " + primaryKey.getName() + " PRIMARY KEY (" + StringUtils.joinColumns(primaryKey.getColumns()) + ')';
     }
 
     @Override
@@ -114,9 +114,9 @@ class OracleDialect extends AbstractDialect {
     public String createImportedKeyQuery(ImportedKey importedKey) {
         return "ALTER TABLE " + getQualifiedName(importedKey.getTable())
                 + " ADD CONSTRAINT " + importedKey.getName()
-                + " FOREIGN KEY (" + importedKey.getColumnName() + ")"
+                + " FOREIGN KEY (" + StringUtils.joinColumns(importedKey.getColumns()) + ")"
                 + " REFERENCES " + workSchema + '.' + importedKey.getPkTableName()
-                + " (" + importedKey.getPkColumnName() + ')';
+                + " (" + StringUtils.joinColumns(importedKey.getPkColumns()) + ')';
     }
 
     @Override
@@ -155,7 +155,7 @@ class OracleDialect extends AbstractDialect {
         ddl.append("INDEX ")
                 .append(getQualifiedName(index)).append(" ON ")
                 .append(getQualifiedName(index.getTable()))
-                .append(" (").append(String.join(", ", index.getColumns())).append(")");
+                .append(" (").append(StringUtils.joinColumns(index.getColumns())).append(")");
         return ddl.toString();
     }
 

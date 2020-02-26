@@ -1,5 +1,7 @@
 package ru.xander.replicator.schema;
 
+import ru.xander.replicator.util.StringUtils;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -80,12 +82,13 @@ public class Table {
             return;
         }
         columnMap.remove(column.getName());
-        if ((primaryKey != null) && primaryKey.getColumnName().equals(column.getName())) {
+        if ((primaryKey != null) && StringUtils.arrayContains(primaryKey.getColumns(), column.getName())) {
             primaryKey = null;
         }
-        importedKeyMap.entrySet().removeIf(e -> e.getValue().getColumnName().equals(column.getName()));
-        exportedKeyMap.entrySet().removeIf(e -> e.getValue().getColumnName().equals(column.getName()));
-        indexMap.entrySet().removeIf(e -> e.getValue().getColumns().contains(column.getName()));
+        importedKeyMap.entrySet().removeIf(key -> StringUtils.arrayContains(key.getValue().getColumns(), column.getName()));
+        exportedKeyMap.entrySet().removeIf(key -> StringUtils.arrayContains(key.getValue().getColumns(), column.getName()));
+        checkConstraintMap.entrySet().removeIf(key -> StringUtils.arrayContains(key.getValue().getColumns(), column.getName()));
+        indexMap.entrySet().removeIf(index -> StringUtils.arrayContains(index.getValue().getColumns(), column.getName()));
     }
 
     public PrimaryKey getPrimaryKey() {
@@ -193,7 +196,7 @@ public class Table {
         }
         return checkConstraintMap.values()
                 .stream()
-                .filter(c -> c.getColumnName().equalsIgnoreCase(columnName))
+                .filter(c -> StringUtils.arrayContains(c.getColumns(), columnName))
                 .findFirst()
                 .orElse(null);
     }

@@ -11,6 +11,7 @@ import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
+import ru.xander.replicator.util.StringUtils;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -61,7 +62,7 @@ public class TableSerializer extends JsonSerializer<Table> {
         }
         gen.writeObjectFieldStart("primaryKey");
         gen.writeStringField("name", primaryKey.getName());
-        gen.writeStringField("columnName", primaryKey.getColumnName());
+        gen.writeStringField("columns", StringUtils.joinColumns(primaryKey.getColumns()));
         gen.writeBooleanField("enabled", primaryKey.getEnabled());
         gen.writeEndObject();
     }
@@ -74,12 +75,12 @@ public class TableSerializer extends JsonSerializer<Table> {
         for (ImportedKey importedKey : importedKeys) {
             gen.writeStartObject();
             gen.writeStringField("name", importedKey.getName());
-            gen.writeStringField("columnName", importedKey.getColumnName());
+            gen.writeStringField("columns", StringUtils.joinColumns(importedKey.getColumns()));
             gen.writeBooleanField("enabled", importedKey.getEnabled());
             gen.writeStringField("pkName", importedKey.getPkName());
             gen.writeStringField("pkTableSchema", importedKey.getPkTableSchema());
             gen.writeStringField("pkTableName", importedKey.getPkTableName());
-            gen.writeStringField("pkColumnName", importedKey.getPkColumnName());
+            gen.writeStringField("pkColumns", StringUtils.joinColumns(importedKey.getPkColumns()));
             gen.writeEndObject();
         }
         gen.writeEndArray();
@@ -93,7 +94,7 @@ public class TableSerializer extends JsonSerializer<Table> {
         for (CheckConstraint checkConstraint : checkConstraints) {
             gen.writeStartObject();
             gen.writeStringField("name", checkConstraint.getName());
-            gen.writeStringField("columnName", checkConstraint.getColumnName());
+            gen.writeStringField("columns", StringUtils.joinColumns(checkConstraint.getColumns()));
             gen.writeBooleanField("enabled", checkConstraint.getEnabled());
             gen.writeStringField("condition", checkConstraint.getCondition());
             gen.writeEndObject();
@@ -110,7 +111,7 @@ public class TableSerializer extends JsonSerializer<Table> {
             gen.writeStartObject();
             gen.writeStringField("name", index.getName());
             gen.writeObjectField("type", index.getType());
-            gen.writeStringField("columns", String.join(",", index.getColumns()));
+            gen.writeStringField("columns", StringUtils.joinColumns(index.getColumns()));
             gen.writeBooleanField("enabled", index.getEnabled());
             gen.writeEndObject();
         }

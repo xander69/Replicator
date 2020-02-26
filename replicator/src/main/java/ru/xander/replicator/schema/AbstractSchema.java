@@ -19,7 +19,7 @@ import java.util.List;
  */
 public abstract class AbstractSchema implements Schema {
 
-    protected final Connection connection;
+    private final Connection connection;
     protected final Listener listener;
 
     public AbstractSchema(Connection connection, Listener listener) {

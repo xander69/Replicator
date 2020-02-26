@@ -8,7 +8,7 @@ public class ExportedKey extends Constraint {
     private String fkTableSchema;
     private String fkTableName;
     private String fkName;
-    private String fkColumnName;
+    private String[] fkColumns;
 
     public String getFkTableSchema() {
         return fkTableSchema;
@@ -34,11 +34,11 @@ public class ExportedKey extends Constraint {
         this.fkName = fkName;
     }
 
-    public String getFkColumnName() {
-        return fkColumnName;
+    public String[] getFkColumns() {
+        return fkColumns;
     }
 
-    public void setFkColumnName(String fkColumnName) {
-        this.fkColumnName = fkColumnName;
+    public void setFkColumns(String[] fkColumns) {
+        this.fkColumns = fkColumns;
     }
 }

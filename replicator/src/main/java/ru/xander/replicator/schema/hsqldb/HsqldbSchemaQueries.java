@@ -62,49 +62,52 @@ class HsqldbSchemaQueries {
 
     String selectConstraints(Table table) {
         return "SELECT\n" +
-                "  'PRIMARY KEY' AS CONSTRAINT_TYPE,\n" +
-                "  P.TABLE_SCHEM AS TABLE_SCHEMA,\n" +
-                "  P.TABLE_NAME  AS TABLE_NAME,\n" +
-                "  P.PK_NAME     AS CONSTRAINT_NAME,\n" +
-                "  P.COLUMN_NAME AS COLUMN_NAME,\n" +
-                "  NULL          AS R_TABLE_SCHEM,\n" +
-                "  NULL          AS R_TABLE_NAME,\n" +
-                "  NULL          AS R_CONSTRAINT_NAME,\n" +
-                "  NULL          AS R_COLUMN_NAME,\n" +
-                "  NULL          AS CONDITION\n" +
+                "  'PRIMARY KEY'               AS CONSTRAINT_TYPE,\n" +
+                "  P.TABLE_SCHEM               AS TABLE_SCHEMA,\n" +
+                "  P.TABLE_NAME                AS TABLE_NAME,\n" +
+                "  P.PK_NAME                   AS CONSTRAINT_NAME,\n" +
+                "  GROUP_CONCAT(P.COLUMN_NAME) AS COLUMN_NAME,\n" +
+                "  NULL                        AS R_TABLE_SCHEM,\n" +
+                "  NULL                        AS R_TABLE_NAME,\n" +
+                "  NULL                        AS R_CONSTRAINT_NAME,\n" +
+                "  NULL                        AS R_COLUMN_NAME,\n" +
+                "  NULL                        AS CONDITION\n" +
                 "FROM INFORMATION_SCHEMA.SYSTEM_PRIMARYKEYS P\n" +
                 "WHERE P.TABLE_SCHEM = UPPER('" + workSchema + "')\n" +
                 "      AND P.TABLE_NAME = UPPER('" + table.getName() + "')\n" +
+                "GROUP BY P.TABLE_SCHEM, P.TABLE_NAME, P.PK_NAME\n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
-                "  'FOREIGN KEY'   AS CONSTRAINT_TYPE,\n" +
-                "  F.FKTABLE_SCHEM AS TABLE_SCHEMA,\n" +
-                "  F.FKTABLE_NAME  AS TABLE_NAME,\n" +
-                "  F.FK_NAME       AS CONSTRAINT_NAME,\n" +
-                "  F.FKCOLUMN_NAME AS COLUMN_NAME,\n" +
-                "  F.PKTABLE_SCHEM AS R_TABLE_SCHEM,\n" +
-                "  F.PKTABLE_NAME  AS R_TABLE_NAME,\n" +
-                "  F.PK_NAME       AS R_CONSTRAINT_NAME,\n" +
-                "  F.PKCOLUMN_NAME AS R_COLUMN_NAME,\n" +
-                "  NULL            AS CONDITION\n" +
+                "  'FOREIGN KEY'                 AS CONSTRAINT_TYPE,\n" +
+                "  F.FKTABLE_SCHEM               AS TABLE_SCHEMA,\n" +
+                "  F.FKTABLE_NAME                AS TABLE_NAME,\n" +
+                "  F.FK_NAME                     AS CONSTRAINT_NAME,\n" +
+                "  GROUP_CONCAT(F.FKCOLUMN_NAME) AS COLUMN_NAME,\n" +
+                "  F.PKTABLE_SCHEM               AS R_TABLE_SCHEM,\n" +
+                "  F.PKTABLE_NAME                AS R_TABLE_NAME,\n" +
+                "  F.PK_NAME                     AS R_CONSTRAINT_NAME,\n" +
+                "  GROUP_CONCAT(F.PKCOLUMN_NAME) AS R_COLUMN_NAME,\n" +
+                "  NULL                          AS CONDITION\n" +
                 "FROM INFORMATION_SCHEMA.SYSTEM_CROSSREFERENCE F\n" +
                 "WHERE F.FKTABLE_SCHEM = UPPER('" + workSchema + "')\n" +
-                "      AND F.FKTABLE_NAME = UPPER('" + table.getName() + "')\n" +
+                "      AND F.FKTABLE_NAME = UPPER('TABLE3')\n" +
+                "GROUP BY F.FKTABLE_SCHEM, F.FKTABLE_NAME, F.FK_NAME, F.PKTABLE_SCHEM, F.PKTABLE_NAME, F.PK_NAME\n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
-                "  'EXPORTED KEY'  AS CONSTRAINT_TYPE,\n" +
-                "  E.FKTABLE_SCHEM AS TABLE_SCHEMA,\n" +
-                "  E.FKTABLE_NAME  AS TABLE_NAME,\n" +
-                "  E.FK_NAME       AS CONSTRAINT_NAME,\n" +
-                "  E.FKCOLUMN_NAME AS COLUMN_NAME,\n" +
-                "  E.PKTABLE_SCHEM AS R_TABLE_SCHEM,\n" +
-                "  E.PKTABLE_NAME  AS R_TABLE_NAME,\n" +
-                "  E.PK_NAME       AS R_CONSTRAINT_NAME,\n" +
-                "  E.PKCOLUMN_NAME AS R_COLUMN_NAME," +
-                "  NULL            AS CONDITION\n" +
+                "  'EXPORTED KEY'                AS CONSTRAINT_TYPE,\n" +
+                "  E.FKTABLE_SCHEM               AS TABLE_SCHEMA,\n" +
+                "  E.FKTABLE_NAME                AS TABLE_NAME,\n" +
+                "  E.FK_NAME                     AS CONSTRAINT_NAME,\n" +
+                "  GROUP_CONCAT(E.FKCOLUMN_NAME) AS COLUMN_NAME,\n" +
+                "  E.PKTABLE_SCHEM               AS R_TABLE_SCHEM,\n" +
+                "  E.PKTABLE_NAME                AS R_TABLE_NAME,\n" +
+                "  E.PK_NAME                     AS R_CONSTRAINT_NAME,\n" +
+                "  GROUP_CONCAT(E.PKCOLUMN_NAME) AS R_COLUMN_NAME,\n" +
+                "  NULL                          AS CONDITION\n" +
                 "FROM INFORMATION_SCHEMA.SYSTEM_CROSSREFERENCE E\n" +
                 "WHERE E.PKTABLE_SCHEM = UPPER('" + workSchema + "')\n" +
                 "      AND E.PKTABLE_NAME = UPPER('" + table.getName() + "')\n" +
+                "GROUP BY E.FKTABLE_SCHEM, E.FKTABLE_NAME, E.FK_NAME, E.PKTABLE_SCHEM, E.PKTABLE_NAME, E.PK_NAME\n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
                 "  'CHECK CONSTRAINT' AS CONSTRAINT_TYPE,\n" +

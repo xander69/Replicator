@@ -319,7 +319,7 @@ public class OracleSchema extends AbstractSchema {
                     PrimaryKey primaryKey = new PrimaryKey();
                     primaryKey.setTable(table);
                     primaryKey.setName(rs.getString("constraint_name"));
-                    primaryKey.setColumnName(rs.getString("column_name"));
+                    primaryKey.setColumns(StringUtils.splitColumns(rs.getString("column_name")));
                     primaryKey.setEnabled("ENABLED".equals(rs.getString("status")));
                     table.setPrimaryKey(primaryKey);
                     break;
@@ -327,19 +327,19 @@ public class OracleSchema extends AbstractSchema {
                     ImportedKey importedKey = new ImportedKey();
                     importedKey.setTable(table);
                     importedKey.setName(rs.getString("constraint_name"));
-                    importedKey.setColumnName(rs.getString("column_name"));
+                    importedKey.setColumns(StringUtils.splitColumns(rs.getString("column_name")));
                     importedKey.setEnabled("ENABLED".equals(rs.getString("status")));
                     importedKey.setPkTableSchema(rs.getString("r_owner"));
                     importedKey.setPkTableName(rs.getString("r_table_name"));
                     importedKey.setPkName(rs.getString("r_constraint_name"));
-                    importedKey.setPkColumnName(rs.getString("r_column_name"));
+                    importedKey.setPkColumns(StringUtils.splitColumns(rs.getString("r_column_name")));
                     table.addImportedKey(importedKey);
                     break;
                 case "C":
                     CheckConstraint checkConstraint = new CheckConstraint();
                     checkConstraint.setTable(table);
                     checkConstraint.setName(rs.getString("constraint_name"));
-                    checkConstraint.setColumnName(rs.getString("column_name"));
+                    checkConstraint.setColumns(StringUtils.splitColumns(rs.getString("column_name")));
                     checkConstraint.setEnabled("ENABLED".equals(rs.getString("status")));
                     checkConstraint.setCondition(rs.getString("search_condition"));
                     table.addCheckConstraint(checkConstraint);
@@ -348,12 +348,12 @@ public class OracleSchema extends AbstractSchema {
                     ExportedKey exportedKey = new ExportedKey();
                     exportedKey.setTable(table);
                     exportedKey.setName(rs.getString("r_constraint_name"));
-                    exportedKey.setColumnName(rs.getString("r_column_name"));
+                    exportedKey.setColumns(StringUtils.splitColumns(rs.getString("r_column_name")));
                     exportedKey.setEnabled("ENABLED".equals(rs.getString("status")));
                     exportedKey.setFkTableSchema(rs.getString("owner"));
                     exportedKey.setFkTableName(rs.getString("table_name"));
                     exportedKey.setFkName(rs.getString("constraint_name"));
-                    exportedKey.setFkColumnName(rs.getString("column_name"));
+                    exportedKey.setFkColumns(StringUtils.splitColumns(rs.getString("column_name")));
                     table.addExportedKey(exportedKey);
                     break;
             }
@@ -368,7 +368,7 @@ public class OracleSchema extends AbstractSchema {
             index.setName(rs.getString("index_name"));
             index.setType(OracleType.toIndexType(rs.getString("index_type")));
             index.setEnabled("VALID".equals(rs.getString("status")));
-            index.setColumns(Arrays.asList(rs.getString("columns").split(",")));
+            index.setColumns(StringUtils.splitColumns(rs.getString("columns")));
             table.addIndex(index);
         });
     }
