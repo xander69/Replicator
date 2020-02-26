@@ -14,6 +14,7 @@ import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Schema;
 import ru.xander.replicator.schema.SchemaConfig;
 import ru.xander.replicator.schema.SchemaConnection;
+import ru.xander.replicator.schema.SchemaUtils;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
@@ -126,7 +127,7 @@ public class CompareAction implements Action {
                         null,
                         dialect -> dialect.createColumnQuery(sourceColumn));
             } else {
-                ColumnDiff[] columnDiffs = sourceColumn.getDiffs(targetColumn);
+                ColumnDiff[] columnDiffs = SchemaUtils.compareColumns(sourceColumn, targetColumn);
                 for (ColumnDiff columnDiff : columnDiffs) {
                     switch (columnDiff) {
                         case DATATYPE:

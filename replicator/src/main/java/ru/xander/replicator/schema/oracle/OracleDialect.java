@@ -9,6 +9,7 @@ import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.IndexType;
 import ru.xander.replicator.schema.PrimaryKey;
+import ru.xander.replicator.schema.SchemaUtils;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
@@ -71,7 +72,8 @@ class OracleDialect extends AbstractDialect {
             if (column.isNullable()) {
                 modify.append("NULL ");
             } else {
-                CheckConstraint checkConstraint = column.getTable().getCheckConstraintByColumn(column.getName());
+                Table table = column.getTable();
+                CheckConstraint checkConstraint = SchemaUtils.getConstraintByColumnName(table.getCheckConstraints(), column.getName());
                 if (checkConstraint != null) {
                     modify.append(" CONSTRAINT ").append(checkConstraint.getName()).append(' ');
                 }
@@ -240,7 +242,8 @@ class OracleDialect extends AbstractDialect {
             definition.append(" DEFAULT ").append(column.getDefaultValue().trim());
         }
         if (!column.isNullable()) {
-            CheckConstraint checkConstraint = column.getTable().getCheckConstraintByColumn(column.getName());
+            Table table = column.getTable();
+            CheckConstraint checkConstraint = SchemaUtils.getConstraintByColumnName(table.getCheckConstraints(), column.getName());
             if (checkConstraint != null) {
                 definition.append(" CONSTRAINT ").append(checkConstraint.getName());
             }

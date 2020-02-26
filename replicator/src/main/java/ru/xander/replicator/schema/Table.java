@@ -190,17 +190,6 @@ public class Table {
         return checkConstraintMap.get(constraintName);
     }
 
-    public CheckConstraint getCheckConstraintByColumn(String columnName) {
-        if (checkConstraintMap == null) {
-            return null;
-        }
-        return checkConstraintMap.values()
-                .stream()
-                .filter(c -> StringUtils.arrayContains(c.getColumns(), columnName))
-                .findFirst()
-                .orElse(null);
-    }
-
     public void addCheckConstraint(CheckConstraint checkConstraint) {
         if (checkConstraintMap == null) {
             checkConstraintMap = new LinkedHashMap<>();

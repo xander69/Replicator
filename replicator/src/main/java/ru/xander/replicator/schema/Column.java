@@ -1,10 +1,5 @@
 package ru.xander.replicator.schema;
 
-import ru.xander.replicator.util.StringUtils;
-
-import java.util.HashSet;
-import java.util.Set;
-
 /**
  * @author Alexander Shakhov
  */
@@ -96,25 +91,4 @@ public class Column implements Comparable<Column> {
     public int compareTo(Column other) {
         return Integer.compare(number, other.number);
     }
-
-    public ColumnDiff[] getDiffs(Column other) {
-        Set<ColumnDiff> columnDiffs = new HashSet<>();
-        if (columnType != other.columnType) {
-            columnDiffs.add(ColumnDiff.DATATYPE);
-        }
-        if (size != other.size) {
-            columnDiffs.add(ColumnDiff.DATATYPE);
-        }
-        if (scale != other.scale) {
-            columnDiffs.add(ColumnDiff.DATATYPE);
-        }
-        if (!StringUtils.equalsStringIgnoreWhiteSpace(defaultValue, other.defaultValue)) {
-            columnDiffs.add(ColumnDiff.DEFAULT);
-        }
-        if (other.nullable != nullable) {
-            columnDiffs.add(ColumnDiff.MANDATORY);
-        }
-        return columnDiffs.toArray(new ColumnDiff[0]);
-    }
-
 }

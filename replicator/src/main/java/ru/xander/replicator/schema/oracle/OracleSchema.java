@@ -15,6 +15,7 @@ import ru.xander.replicator.schema.ExportedKey;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.PrimaryKey;
+import ru.xander.replicator.schema.SchemaUtils;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
@@ -109,7 +110,7 @@ public class OracleSchema extends AbstractSchema {
 
     @Override
     public void modifyColumn(Column oldColumn, Column newColumn) {
-        ColumnDiff[] columnDiffs = oldColumn.getDiffs(newColumn);
+        ColumnDiff[] columnDiffs = SchemaUtils.compareColumns(oldColumn, newColumn);
         if (columnDiffs.length > 0) {
             String sql = dialect.modifyColumnQuery(newColumn, columnDiffs);
             alter(MODIFY_COLUMN, newColumn.getTable().getName(), newColumn.getName(), Arrays.toString(columnDiffs), sql);
