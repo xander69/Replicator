@@ -1,5 +1,7 @@
 package ru.xander.replicator.schema;
 
+import java.math.BigInteger;
+
 /**
  * @author Alexander Shakhov
  */
@@ -8,11 +10,12 @@ public class Sequence {
     private Table table;
     private String schema;
     private String name;
-    private String minValue;
-    private String maxValue;
-    private Long incrementBy;
-    private Long lastNumber;
-    private Long cacheSize;
+    private BigInteger startWith;
+    private BigInteger incrementBy;
+    private BigInteger minValue;
+    private BigInteger maxValue;
+    private BigInteger cacheSize;
+    private Boolean cycle;
 
     public Table getTable() {
         return table;
@@ -38,43 +41,51 @@ public class Sequence {
         this.name = name;
     }
 
-    public String getMinValue() {
-        return minValue;
+    public BigInteger getStartWith() {
+        return startWith;
     }
 
-    public void setMinValue(String minValue) {
-        this.minValue = minValue;
+    public void setStartWith(BigInteger startWith) {
+        this.startWith = startWith;
     }
 
-    public String getMaxValue() {
-        return maxValue;
-    }
-
-    public void setMaxValue(String maxValue) {
-        this.maxValue = maxValue;
-    }
-
-    public Long getIncrementBy() {
+    public BigInteger getIncrementBy() {
         return incrementBy;
     }
 
-    public void setIncrementBy(Long incrementBy) {
+    public void setIncrementBy(BigInteger incrementBy) {
         this.incrementBy = incrementBy;
     }
 
-    public Long getLastNumber() {
-        return lastNumber;
+    public BigInteger getMinValue() {
+        return minValue;
     }
 
-    public void setLastNumber(Long lastNumber) {
-        this.lastNumber = lastNumber;
+    public void setMinValue(BigInteger minValue) {
+        this.minValue = minValue;
     }
 
-    public Long getCacheSize() {
+    public BigInteger getMaxValue() {
+        return maxValue;
+    }
+
+    public void setMaxValue(BigInteger maxValue) {
+        this.maxValue = maxValue;
+    }
+
+    public BigInteger getCacheSize() {
         return cacheSize;
     }
 
-    public void setCacheSize(Long cacheSize) {
+    public void setCacheSize(BigInteger cacheSize) {
         this.cacheSize = cacheSize;
+    }
+
+    public Boolean getCycle() {
+        return cycle;
+    }
+
+    public void setCycle(Boolean cycle) {
+        this.cycle = cycle;
     }
 }

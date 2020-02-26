@@ -22,6 +22,7 @@ import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.schema.VendorType;
 import ru.xander.replicator.util.StringUtils;
 
+import java.math.BigInteger;
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -408,13 +409,14 @@ public class OracleSchema extends AbstractSchema {
         table.setSequence(selectOne(schemaQueries.selectSequence(table), rs -> {
             Sequence sequence = new Sequence();
             sequence.setTable(table);
-            sequence.setSchema(rs.getString("sequence_owner"));
-            sequence.setName(rs.getString("sequence_name"));
-            sequence.setMinValue(rs.getString("min_value"));
-            sequence.setMaxValue(rs.getString("max_value"));
-            sequence.setIncrementBy(rs.getLong("increment_by"));
-            sequence.setLastNumber(rs.getLong("last_number"));
-            sequence.setCacheSize(rs.getLong("cache_size"));
+            sequence.setSchema(rs.getString("SEQUENCE_OWNER"));
+            sequence.setName(rs.getString("SEQUENCE_NAME"));
+            sequence.setStartWith(new BigInteger(rs.getString("LAST_NUMBER")));
+            sequence.setIncrementBy(new BigInteger(rs.getString("INCREMENT_BY")));
+            sequence.setMinValue(new BigInteger(rs.getString("MIN_VALUE")));
+            sequence.setMaxValue(new BigInteger(rs.getString("MAX_VALUE")));
+            sequence.setCacheSize(new BigInteger(rs.getString("CACHE_SIZE")));
+            sequence.setCycle("Y".equals(rs.getString("CYCLE_FLAG")));
             return sequence;
         }));
     }

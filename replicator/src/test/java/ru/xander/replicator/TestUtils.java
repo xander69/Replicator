@@ -108,11 +108,12 @@ public final class TestUtils {
         if (sequence != null) {
             System.out.println("Sequence:");
             System.out.println(sequence.getSchema() + '.' + sequence.getName()
+                    + ", start = " + sequence.getStartWith()
+                    + ", inc = " + sequence.getIncrementBy()
                     + ", min =" + sequence.getMinValue()
                     + ", max = " + sequence.getMaxValue()
-                    + ", inc = " + sequence.getIncrementBy()
-                    + ", last = " + sequence.getLastNumber()
-                    + ", cache = " + sequence.getCacheSize());
+                    + ", cache = " + sequence.getCacheSize()
+                    + ", cycle = " + sequence.getCycle());
             System.out.println();
         }
 

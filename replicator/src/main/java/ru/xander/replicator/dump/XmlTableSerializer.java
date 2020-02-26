@@ -223,11 +223,12 @@ public class XmlTableSerializer implements TableSerializer {
         writer.writeStartElement("sequence");
         writer.writeAttribute("schema", sequence.getSchema());
         writer.writeAttribute("name", sequence.getName());
-        writer.writeAttribute("maxValue", sequence.getMaxValue());
-        writer.writeAttribute("minValue", sequence.getMinValue());
+        writer.writeAttribute("startWith", String.valueOf(sequence.getStartWith()));
         writer.writeAttribute("incrementBy", String.valueOf(sequence.getIncrementBy()));
-        writer.writeAttribute("lastNumber", String.valueOf(sequence.getLastNumber()));
+        writer.writeAttribute("minValue", String.valueOf(sequence.getMinValue()));
+        writer.writeAttribute("maxValue", String.valueOf(sequence.getMaxValue()));
         writer.writeAttribute("cacheSize", String.valueOf(sequence.getCacheSize()));
+        writer.writeAttribute("cycle", String.valueOf(sequence.getCycle()));
         writer.writeEndElement();
     }
 

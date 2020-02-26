@@ -193,17 +193,34 @@ class OracleDialect extends AbstractDialect {
     @Override
     public String createSequenceQuery(Sequence sequence) {
         StringBuilder sql = new StringBuilder();
-        sql.append("CREATE SEQUENCE ").append(getQualifiedName(sequence)).append('\n')
-                .append("MINVALUE ").append(sequence.getMinValue()).append('\n')
-                .append("MAXVALUE ").append(sequence.getMaxValue()).append('\n')
-                .append("START WITH ").append(sequence.getLastNumber()).append('\n')
-                .append("INCREMENT BY ").append(sequence.getIncrementBy()).append('\n');
-        if (sequence.getCacheSize() > 0) {
-            sql.append("CACHE ").append(sequence.getCacheSize());
+        sql.append("CREATE SEQUENCE ").append(getQualifiedName(sequence)).append('\n');
+        if (sequence.getStartWith() == null) {
+            sql.append("START WITH 1\n");
         } else {
-            sql.append("NOCACHE");
+            sql.append("START WITH ").append(sequence.getStartWith()).append("\n");
         }
-        return sql.toString();
+        if (sequence.getIncrementBy() == null) {
+            sql.append("INCREMENT BY 1\n");
+        } else {
+            sql.append("INCREMENT BY ").append(sequence.getIncrementBy()).append("\n");
+        }
+        if (sequence.getMinValue() != null) {
+            sql.append("MINVALUE ").append(sequence.getMinValue()).append('\n');
+        }
+        if (sequence.getMaxValue() != null) {
+            sql.append("MAXVALUE ").append(sequence.getMaxValue()).append('\n');
+        }
+        if (sequence.getCacheSize() != null) {
+            sql.append("CACHE ").append(sequence.getCacheSize()).append("\n");
+        } else {
+            sql.append("NOCACHE\n");
+        }
+        if (Boolean.TRUE.equals(sequence.getCycle())) {
+            sql.append("CYCLE");
+        } else {
+            sql.append("NOCYCLE");
+        }
+        return sql.toString().trim();
     }
 
     @Override

@@ -420,6 +420,7 @@ public class CompareAction implements Action {
                     // TODO: не красиво как-то. надо предусмотреть возможность нескольких запросов для одной операции
                     dialect -> dialect.dropSequenceQuery(targetSequence) + "\n" + dialect.createSequenceQuery(sourceSequence));
         }
+        //TODO: сравнивать startWith, incrementBy, minValue, maxValue, cycle, cacheSize
     }
 
     private static class DiffCollector {

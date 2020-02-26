@@ -125,11 +125,12 @@ public class TableSerializer extends JsonSerializer<Table> {
         gen.writeObjectFieldStart("sequence");
         gen.writeStringField("schema", sequence.getSchema());
         gen.writeStringField("name", sequence.getName());
-        gen.writeStringField("maxValue", sequence.getMaxValue());
-        gen.writeStringField("minValue", sequence.getMinValue());
-        gen.writeNumberField("incrementBy", sequence.getIncrementBy());
-        gen.writeNumberField("lastNumber", sequence.getLastNumber());
-        gen.writeNumberField("cacheSize", sequence.getCacheSize());
+        gen.writeStringField("startWith", String.valueOf(sequence.getStartWith()));
+        gen.writeStringField("incrementBy", String.valueOf(sequence.getIncrementBy()));
+        gen.writeStringField("minValue", String.valueOf(sequence.getMinValue()));
+        gen.writeStringField("maxValue", String.valueOf(sequence.getMaxValue()));
+        gen.writeStringField("cacheSize", String.valueOf(sequence.getCacheSize()));
+        gen.writeBooleanField("cycle", sequence.getCycle());
         gen.writeEndObject();
     }
 

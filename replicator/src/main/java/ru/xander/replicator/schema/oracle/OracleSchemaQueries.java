@@ -202,11 +202,12 @@ final class OracleSchemaQueries {
         return "SELECT\n" +
                 "  S.SEQUENCE_OWNER,\n" +
                 "  S.SEQUENCE_NAME,\n" +
+                "  S.LAST_NUMBER,\n" +
+                "  S.INCREMENT_BY,\n" +
                 "  S.MIN_VALUE,\n" +
                 "  S.MAX_VALUE,\n" +
-                "  S.INCREMENT_BY,\n" +
-                "  S.LAST_NUMBER,\n" +
-                "  S.CACHE_SIZE\n" +
+                "  S.CACHE_SIZE,\n" +
+                "  S.CYCLE_FLAG\n" +
                 "FROM SYS.ALL_TRIGGERS T\n" +
                 "  INNER JOIN SYS.ALL_DEPENDENCIES D ON\n" +
                 "    T.TABLE_OWNER = UPPER('" + workSchema + "')\n" +
