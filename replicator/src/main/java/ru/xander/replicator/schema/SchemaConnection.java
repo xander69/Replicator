@@ -3,6 +3,7 @@ package ru.xander.replicator.schema;
 import ru.xander.replicator.exception.ReplicatorException;
 import ru.xander.replicator.exception.UnsupportedDriverException;
 import ru.xander.replicator.listener.Listener;
+import ru.xander.replicator.schema.hsqldb.HsqldbSchema;
 import ru.xander.replicator.schema.oracle.OracleSchema;
 
 import java.sql.Connection;
@@ -27,6 +28,11 @@ public class SchemaConnection implements AutoCloseable {
                 Class.forName(config.getJdbcDriver());
                 this.connection = DriverManager.getConnection(config.getJdbcUrl(), config.getUsername(), config.getPassword());
                 this.schema = new OracleSchema(connection, listener, config.getWorkSchema());
+            } else if ("org.hsqldb.jdbc.JDBCDriver".equals(jdbcDriver)) {
+                notify("Connect to " + config.getJdbcUrl());
+                Class.forName(config.getJdbcDriver());
+                this.connection = DriverManager.getConnection(config.getJdbcUrl(), config.getUsername(), config.getPassword());
+                this.schema = new HsqldbSchema(connection, listener, config.getWorkSchema());
             } else {
                 throw new UnsupportedDriverException(jdbcDriver);
             }

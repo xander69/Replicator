@@ -11,6 +11,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * @author Alexander Shakhov
@@ -23,6 +25,11 @@ public abstract class AbstractSchema implements Schema {
     public AbstractSchema(Connection connection, Listener listener) {
         this.connection = connection;
         this.listener = listener;
+    }
+
+    @Override
+    public List<String> getTables() {
+        return getTables(Collections.emptyList());
     }
 
     protected <T> T selectOne(String sql, RowMapper<T> mapper) {
@@ -39,8 +46,6 @@ public abstract class AbstractSchema implements Schema {
             throw new QueryFailedException(sql, e);
         }
     }
-
-
 
     protected void select(String sql, DataSetMapper mapper) {
         try (

@@ -15,6 +15,8 @@ public interface Schema {
 
     DataFormatter getDataFormatter();
 
+    List<String> getTables();
+
     List<String> getTables(List<Filter> filterList);
 
     Table getTable(String tableName);

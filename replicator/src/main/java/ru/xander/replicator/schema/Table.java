@@ -23,14 +23,6 @@ public class Table {
     private Map<String, Trigger> triggerMap;
     private Sequence sequence;
 
-    public Table() {
-    }
-
-    public Table(String schema, String name) {
-        this.schema = schema;
-        this.name = name;
-    }
-
     public String getSchema() {
         return schema;
     }
