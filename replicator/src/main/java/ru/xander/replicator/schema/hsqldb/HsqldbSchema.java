@@ -13,6 +13,7 @@ import ru.xander.replicator.schema.Dialect;
 import ru.xander.replicator.schema.ExportedKey;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
+import ru.xander.replicator.schema.IndexType;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
@@ -66,7 +67,7 @@ public class HsqldbSchema extends AbstractSchema {
         }
         findColumns(table);
         findConstraints(table);
-//        findIndices(table);
+        findIndices(table);
 //        findTriggers(table);
 //        findSequence(table);
         return table;
@@ -327,6 +328,19 @@ public class HsqldbSchema extends AbstractSchema {
                     table.addExportedKey(exportedKey);
                     break;
             }
+        });
+    }
+
+    private void findIndices(Table table) {
+        notify("Find indices for table " + table.getName());
+        select(schemaQueries.selectIndices(table), rs -> {
+            Index index = new Index();
+            index.setTable(table);
+            index.setName(rs.getString("INDEX_NAME"));
+            index.setType(rs.getBoolean("NON_UNIQUE") ? IndexType.NORMAL : IndexType.UNIQUE);
+            index.setEnabled(true);
+            index.setColumns(StringUtils.splitColumns(rs.getString("COLUMNS")));
+            table.addIndex(index);
         });
     }
 }

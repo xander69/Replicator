@@ -90,7 +90,7 @@ class HsqldbSchemaQueries {
                 "  NULL                          AS CONDITION\n" +
                 "FROM INFORMATION_SCHEMA.SYSTEM_CROSSREFERENCE F\n" +
                 "WHERE F.FKTABLE_SCHEM = UPPER('" + workSchema + "')\n" +
-                "      AND F.FKTABLE_NAME = UPPER('TABLE3')\n" +
+                "      AND F.FKTABLE_NAME = UPPER('" + table.getName() + "')\n" +
                 "GROUP BY F.FKTABLE_SCHEM, F.FKTABLE_NAME, F.FK_NAME, F.PKTABLE_SCHEM, F.PKTABLE_NAME, F.PK_NAME\n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
@@ -126,5 +126,22 @@ class HsqldbSchemaQueries {
                 "      AND CCU.TABLE_NAME = UPPER('" + table.getName() + "')\n" +
                 "      AND CC.CONSTRAINT_SCHEMA = CCU.CONSTRAINT_SCHEMA\n" +
                 "      AND CC.CONSTRAINT_NAME = CCU.CONSTRAINT_NAME";
+    }
+
+    String selectIndices(Table table) {
+        return "SELECT\n" +
+                "  TABLE_SCHEM,\n" +
+                "  TABLE_NAME,\n" +
+                "  INDEX_NAME,\n" +
+                "  NON_UNIQUE,\n" +
+                "  GROUP_CONCAT(COLUMN_NAME) AS COLUMNS\n" +
+                "FROM INFORMATION_SCHEMA.SYSTEM_INDEXINFO\n" +
+                "WHERE TABLE_SCHEM = UPPER('" + workSchema + "')\n" +
+                "  AND TABLE_NAME = UPPER('" + table.getName() + "')\n" +
+                "GROUP BY\n" +
+                "  TABLE_SCHEM,\n" +
+                "  TABLE_NAME,\n" +
+                "  INDEX_NAME,\n" +
+                "  NON_UNIQUE";
     }
 }

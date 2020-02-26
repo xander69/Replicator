@@ -5,6 +5,7 @@ import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.SchemaConfig;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
+import ru.xander.replicator.util.StringUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -69,29 +70,29 @@ public final class TestUtils {
         PrimaryKey primaryKey = table.getPrimaryKey();
         if (primaryKey != null) {
             System.out.println("Primary key:");
-            System.out.println(primaryKey.getName() + " (" + primaryKey.getColumnName() + ") " + primaryKey.getEnabled());
+            System.out.println(primaryKey.getName() + " (" + StringUtils.joinColumns(primaryKey.getColumns()) + ") " + primaryKey.getEnabled());
             System.out.println();
         }
 
         System.out.println("Imported keys:");
         table.getImportedKeys().forEach(r ->
                 System.out.println(r.getName()
-                        + " (" + r.getColumnName() + ") to "
+                        + " (" + StringUtils.joinColumns(r.getColumns()) + ") to "
                         + r.getPkTableSchema() + "." + r.getPkTableName() + "." + r.getPkName()
-                        + " (" + r.getPkColumnName() + ") " + r.getEnabled()));
+                        + " (" + StringUtils.joinColumns(r.getPkColumns()) + ") " + r.getEnabled()));
         System.out.println();
 
         System.out.println("Exported keys:");
         table.getExportedKeys().forEach(r ->
                 System.out.println(r.getFkTableSchema() + '.' + r.getFkTableName() + '.' + r.getFkName()
-                        + " (" + r.getFkColumnName() + ") to "
-                        + r.getName() + " (" + r.getColumnName() + ") " + r.getEnabled()));
+                        + " (" + StringUtils.joinColumns(r.getFkColumns()) + ") to "
+                        + r.getName() + " (" + StringUtils.joinColumns(r.getColumns()) + ") " + r.getEnabled()));
         System.out.println();
 
         System.out.println("Check constraints:");
         table.getCheckConstraints().forEach(r ->
                 System.out.println(r.getName()
-                        + " (" + r.getColumnName() + ')'
+                        + " (" + StringUtils.joinColumns(r.getColumns()) + ')'
                         + " condition = '" + r.getCondition() + '\''));
         System.out.println();
 
@@ -99,7 +100,7 @@ public final class TestUtils {
         table.getIndices().forEach(i ->
                 System.out.println(i.getName()
                         + " " + i.getType()
-                        + " " + i.getColumns()
+                        + " " + StringUtils.joinColumns(i.getColumns())
                         + " " + i.getEnabled()));
         System.out.println();
 

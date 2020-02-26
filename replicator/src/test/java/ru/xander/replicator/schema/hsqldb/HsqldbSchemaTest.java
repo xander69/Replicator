@@ -11,6 +11,8 @@ import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnType;
 import ru.xander.replicator.schema.ExportedKey;
 import ru.xander.replicator.schema.ImportedKey;
+import ru.xander.replicator.schema.Index;
+import ru.xander.replicator.schema.IndexType;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.Table;
@@ -43,7 +45,7 @@ public class HsqldbSchemaTest {
     @Test
     public void getTables() {
         List<String> actual = schemaConnection.getSchema().getTables();
-        MatcherAssert.assertThat(actual, contains("TABLE1", "TABLE2", "TABLE3"));
+        MatcherAssert.assertThat(actual, contains("TABLE1", "TABLE2", "TABLE3", "TABLE4"));
     }
 
     @Test
@@ -113,7 +115,7 @@ public class HsqldbSchemaTest {
         Assert.assertNotNull(primaryKey);
         Assert.assertEquals(table2, primaryKey.getTable());
         Assert.assertEquals("TAB2_PK", primaryKey.getName());
-        Assert.assertEquals("C1", primaryKey.getColumnName());
+        Assert.assertArrayEquals(new String[]{"C1", "C2"}, primaryKey.getColumns());
         Assert.assertTrue(primaryKey.getEnabled());
 
         Collection<CheckConstraint> checkConstraints = table2.getCheckConstraints();
@@ -123,9 +125,9 @@ public class HsqldbSchemaTest {
         Assert.assertNotNull(checkConstraint);
         Assert.assertEquals(table2, checkConstraint.getTable());
         Assert.assertEquals("TAB2_CHECK", checkConstraint.getName());
-        Assert.assertEquals("C2", checkConstraint.getColumnName());
+        Assert.assertArrayEquals(new String[]{"C3"}, checkConstraint.getColumns());
         Assert.assertTrue(checkConstraint.getEnabled());
-        Assert.assertEquals("DV.TABLE2.C2 IS NOT NULL", checkConstraint.getCondition());
+        Assert.assertEquals("DV.TABLE2.C3 IS NOT NULL", checkConstraint.getCondition());
         Assert.assertEquals(checkConstraint, table2.getCheckConstraint("TAB2_CHECK"));
         Assert.assertNull(table2.getCheckConstraint("XXX"));
 
@@ -139,12 +141,12 @@ public class HsqldbSchemaTest {
         Assert.assertNotNull(exportedKey);
         Assert.assertEquals(table2, exportedKey.getTable());
         Assert.assertEquals("TAB2_PK", exportedKey.getName());
-        Assert.assertEquals("C1", exportedKey.getColumnName());
+        Assert.assertArrayEquals(new String[]{"C1", "C2"}, exportedKey.getColumns());
         Assert.assertTrue(exportedKey.getEnabled());
         Assert.assertEquals("DV", exportedKey.getFkTableSchema());
         Assert.assertEquals("TABLE3", exportedKey.getFkTableName());
         Assert.assertEquals("TAB3_FK", exportedKey.getFkName());
-        Assert.assertEquals("X1", exportedKey.getFkColumnName());
+        Assert.assertArrayEquals(new String[]{"X1", "X2"}, exportedKey.getFkColumns());
         Assert.assertEquals(exportedKey, table2.getExportedKey("TAB3_FK"));
         Assert.assertNull(table2.getExportedKey("XXX"));
 
@@ -163,14 +165,42 @@ public class HsqldbSchemaTest {
         Assert.assertNotNull(importedKey);
         Assert.assertEquals(table3, importedKey.getTable());
         Assert.assertEquals("TAB3_FK", importedKey.getName());
-        Assert.assertEquals("X1", importedKey.getColumnName());
+        Assert.assertArrayEquals(new String[]{"X1", "X2"}, importedKey.getColumns());
+
         Assert.assertTrue(importedKey.getEnabled());
         Assert.assertEquals("DV", importedKey.getPkTableSchema());
         Assert.assertEquals("TABLE2", importedKey.getPkTableName());
         Assert.assertEquals("TAB2_PK", importedKey.getPkName());
-        Assert.assertEquals("C1", importedKey.getPkColumnName());
+        Assert.assertArrayEquals(new String[]{"C1", "C2"}, importedKey.getPkColumns());
         Assert.assertEquals(importedKey, table3.getImportedKey("TAB3_FK"));
         Assert.assertNull(table2.getImportedKey("XXX"));
+    }
+
+    @Test
+    public void getTableWithIndices() {
+        Table table4 = schemaConnection.getSchema().getTable("TABLE4");
+        Assert.assertNotNull(table4);
+        Assert.assertEquals("TABLE4", table4.getName());
+
+        Collection<Index> indices = table4.getIndices();
+        Assert.assertNotNull(indices);
+        Assert.assertEquals(2, indices.size());
+
+        Index index = table4.getIndex("T4_INDEX");
+        Assert.assertNotNull(index);
+        Assert.assertEquals(table4, index.getTable());
+        Assert.assertEquals("T4_INDEX", index.getName());
+        Assert.assertEquals(IndexType.NORMAL, index.getType());
+        Assert.assertTrue(index.getEnabled());
+        Assert.assertArrayEquals(new String[]{"C1", "C2"}, index.getColumns());
+
+        Index unique = table4.getIndex("T4_UNIQUE");
+        Assert.assertNotNull(unique);
+        Assert.assertEquals("T4_UNIQUE", unique.getName());
+        Assert.assertEquals(IndexType.UNIQUE, unique.getType());
+        Assert.assertArrayEquals(new String[]{"C3"}, unique.getColumns());
+
+        Assert.assertNull(table4.getIndex("XXX"));
     }
 
     private void assertColumn(Column actualColumn, int expectedNumber, String expectedName, ColumnType expectedType) {
