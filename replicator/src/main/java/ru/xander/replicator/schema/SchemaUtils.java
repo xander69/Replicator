@@ -43,4 +43,17 @@ public abstract class SchemaUtils {
                 .findFirst()
                 .orElse(null);
     }
+
+    public static Column cloneColumn(Column column) {
+        Column cloned = new Column();
+        cloned.setNumber(column.getNumber());
+        cloned.setName(column.getName());
+        cloned.setColumnType(column.getColumnType());
+        cloned.setSize(column.getSize());
+        cloned.setScale(column.getScale());
+        cloned.setNullable(column.isNullable());
+        cloned.setDefaultValue(column.getDefaultValue());
+        cloned.setComment(column.getComment());
+        return cloned;
+    }
 }

@@ -11,6 +11,7 @@ import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Schema;
 import ru.xander.replicator.schema.SchemaConfig;
 import ru.xander.replicator.schema.SchemaConnection;
+import ru.xander.replicator.schema.SchemaUtils;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
@@ -157,12 +158,18 @@ public class ReplicateAction implements Action {
 
         sourceColumns.forEach((columnName, sourceColumn) -> {
             Column targetColumn = targetColumns.get(columnName);
+
+            Column clonedColumn = SchemaUtils.cloneColumn(sourceColumn);
+            clonedColumn.setTable(targetTable);
             if (targetColumn == null) {
                 target.createColumn(sourceColumn);
+                clonedColumn.setComment(null); // комментарий будет создаваться позже
             } else {
                 target.modifyColumn(targetColumn, sourceColumn);
+                clonedColumn.setComment(targetColumn.getComment()); // комментарий будет создаваться позже
             }
-            targetTable.addColumn(sourceColumn);
+
+            targetTable.addColumn(clonedColumn);
         });
     }
 
