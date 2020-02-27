@@ -19,6 +19,7 @@ CREATE TABLE DV.TABLE1
     BIG        BIGINT,
     FLOAT1     FLOAT,
     FLOAT2     FLOAT(10),
+    FLOAT3     DOUBLE,
     REAL_      REAL,
     CHR1       CHAR,
     CHR2       CHAR(5),

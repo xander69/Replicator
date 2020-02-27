@@ -6,7 +6,7 @@ import ru.xander.replicator.dump.JsonTableSerializer;
 import ru.xander.replicator.dump.SqlTableSerializer;
 import ru.xander.replicator.dump.TableSerializer;
 import ru.xander.replicator.dump.XmlTableSerializer;
-import ru.xander.replicator.exception.ReplicatorException;
+import ru.xander.replicator.exception.DumpException;
 import ru.xander.replicator.schema.Schema;
 import ru.xander.replicator.schema.SchemaConfig;
 import ru.xander.replicator.schema.Table;
@@ -45,7 +45,7 @@ public class DumpAction implements Action {
     private void dumpTable(Schema schema) {
         Table table = schema.getTable(tableName);
         if (table == null) {
-            throw new ReplicatorException("Table " + tableName + " not found");
+            throw new DumpException("Table " + tableName + " not found");
         }
         TableSerializer tableSerializer;
         switch (dumpType) {
@@ -59,13 +59,13 @@ public class DumpAction implements Action {
                 tableSerializer = new XmlTableSerializer();
                 break;
             default:
-                throw new ReplicatorException("Unsupported dump type <" + dumpType + ">");
+                throw new DumpException("Unsupported dump type <" + dumpType + ">");
         }
         try {
             tableSerializer.serialize(table, schema, output, options);
         } catch (Exception e) {
             String errorMessage = "Failed to dump table " + tableName + ": " + e.getMessage();
-            throw new ReplicatorException(errorMessage, e);
+            throw new DumpException(errorMessage, e);
         }
     }
 }

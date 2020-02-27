@@ -1,6 +1,4 @@
-package ru.xander.replicator.dump.data;
-
-import ru.xander.replicator.schema.Column;
+package ru.xander.replicator.schema;
 
 /**
  * @author Alexander Shakhov

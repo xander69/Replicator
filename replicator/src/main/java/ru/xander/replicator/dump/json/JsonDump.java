@@ -2,8 +2,8 @@ package ru.xander.replicator.dump.json;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import ru.xander.replicator.dump.data.TableRowExtractor;
 import ru.xander.replicator.schema.Table;
+import ru.xander.replicator.schema.TableRowCursor;
 
 /**
  * @author Alexander Shakhov
@@ -15,7 +15,7 @@ public class JsonDump {
     private Table table;
     @JsonProperty("rows")
     @JsonSerialize(using = RowsSerializer.class)
-    private TableRowExtractor rowExtractor;
+    private TableRowCursor cursor;
 
     public Table getTable() {
         return table;
@@ -25,11 +25,11 @@ public class JsonDump {
         this.table = table;
     }
 
-    public TableRowExtractor getRowExtractor() {
-        return rowExtractor;
+    public TableRowCursor getCursor() {
+        return cursor;
     }
 
-    public void setRowExtractor(TableRowExtractor rowExtractor) {
-        this.rowExtractor = rowExtractor;
+    public void setCursor(TableRowCursor cursor) {
+        this.cursor = cursor;
     }
 }

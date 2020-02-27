@@ -1,17 +1,17 @@
 package ru.xander.replicator.dump;
 
 import ru.xander.replicator.action.DumpActionConfigurer;
-import ru.xander.replicator.dump.data.TableField;
-import ru.xander.replicator.dump.data.TableRow;
-import ru.xander.replicator.dump.data.TableRowExtractor;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.PrimaryKey;
-import ru.xander.replicator.schema.SchemaConnection;
+import ru.xander.replicator.schema.Schema;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
+import ru.xander.replicator.schema.TableField;
+import ru.xander.replicator.schema.TableRow;
+import ru.xander.replicator.schema.TableRowCursor;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.util.StringUtils;
 
@@ -33,7 +33,7 @@ public class XmlTableSerializer implements TableSerializer {
     private Indenter indenter;
 
     @Override
-    public void serialize(Table table, SchemaConnection schemaConnection, OutputStream output, DumpOptions options) throws IOException {
+    public void serialize(Table table, Schema schema, OutputStream output, DumpOptions options) throws IOException {
         Charset charset = options.getCharset() == null ? DumpActionConfigurer.DEFAULT_CHARSET : options.getCharset();
         try {
             XMLOutputFactory xmlFactory = XMLOutputFactory.newInstance();
@@ -48,13 +48,13 @@ public class XmlTableSerializer implements TableSerializer {
                 writeTable(writer, table);
             }
             if (options.isDumpDml()) {
-                writeRows(writer, table, schemaConnection);
+                writeRows(writer, table, schema, options);
             }
             writer.writeEndElement();
 
             indenter.write(0);
             writer.writeEndDocument();
-        } catch (XMLStreamException e) {
+        } catch (Exception e) {
             throw new IOException(e.getMessage(), e);
         }
     }
@@ -78,12 +78,12 @@ public class XmlTableSerializer implements TableSerializer {
         writer.writeEndElement();
     }
 
-    private void writeRows(XMLStreamWriter writer, Table table, SchemaConnection schemaConnection) throws XMLStreamException {
-        try (TableRowExtractor rowExtractor = new TableRowExtractor(schemaConnection, table)) {
+    private void writeRows(XMLStreamWriter writer, Table table, Schema schema, DumpOptions options) throws Exception {
+        try (TableRowCursor cursor = schema.selectRows(table, options.getVerboseEach())) {
             indenter.write(1);
             writer.writeStartElement("rows");
             TableRow row;
-            while ((row = rowExtractor.nextRow()) != null) {
+            while ((row = cursor.nextRow()) != null) {
                 indenter.write(2);
                 writer.writeStartElement("row");
                 for (TableField field : row.getFields()) {

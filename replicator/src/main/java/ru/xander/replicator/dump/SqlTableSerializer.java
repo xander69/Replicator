@@ -1,9 +1,6 @@
 package ru.xander.replicator.dump;
 
 import ru.xander.replicator.action.DumpActionConfigurer;
-import ru.xander.replicator.dump.data.TableField;
-import ru.xander.replicator.dump.data.TableRow;
-import ru.xander.replicator.dump.data.TableRowExtractor;
 import ru.xander.replicator.exception.DumpException;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
@@ -11,8 +8,11 @@ import ru.xander.replicator.schema.DataFormatter;
 import ru.xander.replicator.schema.Dialect;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
-import ru.xander.replicator.schema.SchemaConnection;
+import ru.xander.replicator.schema.Schema;
 import ru.xander.replicator.schema.Table;
+import ru.xander.replicator.schema.TableField;
+import ru.xander.replicator.schema.TableRow;
+import ru.xander.replicator.schema.TableRowCursor;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.util.StringUtils;
 
@@ -28,19 +28,19 @@ import java.util.stream.Collectors;
 public class SqlTableSerializer implements TableSerializer {
 
     @Override
-    public void serialize(Table table, SchemaConnection schemaConnection, OutputStream output, DumpOptions options) throws IOException {
+    public void serialize(Table table, Schema schema, OutputStream output, DumpOptions options) throws IOException {
         Charset charset = options.getCharset() == null ? DumpActionConfigurer.DEFAULT_CHARSET : options.getCharset();
-        Dialect dialect = schemaConnection.getSchema().getDialect();
+        Dialect dialect = schema.getDialect();
         if (options.isDumpDdl()) {
             serializeTable(table, dialect, output, charset);
             if (options.isDumpDml()) {
                 output.write('\n');
-                serializeRows(table, schemaConnection, output, options);
+                serializeRows(table, schema, output, options);
             }
             serializeTableObjects(table, dialect, output, charset);
             serializeAnalyze(table, dialect, output, charset);
         } else if (options.isDumpDml()) {
-            serializeRows(table, schemaConnection, output, options);
+            serializeRows(table, schema, output, options);
             serializeAnalyze(table, dialect, output, charset);
         }
     }
@@ -101,18 +101,16 @@ public class SqlTableSerializer implements TableSerializer {
         }
     }
 
-    private void serializeRows(Table table, SchemaConnection schemaConnection, OutputStream output, DumpOptions options) throws IOException {
-        try (TableRowExtractor rowExtractor = new TableRowExtractor(schemaConnection, table)) {
-            rowExtractor.setVerboseEach(options.getVerboseEach());
-
-            final Dialect dialect = schemaConnection.getSchema().getDialect();
-            final DataFormatter formatter = schemaConnection.getSchema().getDataFormatter();
+    private void serializeRows(Table table, Schema schema, OutputStream output, DumpOptions options) throws IOException {
+        try (TableRowCursor cursor = schema.selectRows(table, options.getVerboseEach())) {
+            final Dialect dialect = schema.getDialect();
+            final DataFormatter formatter = schema.getDataFormatter();
             final long commitEach = options.getCommitEach();
             final Charset charset = options.getCharset();
 
             long currentRow = 0;
             TableRow row;
-            while ((row = rowExtractor.nextRow()) != null) {
+            while ((row = cursor.nextRow()) != null) {
                 String insertQuery = insertQuery(row, formatter);
                 output.write(insertQuery.getBytes(charset));
                 output.write(';');
@@ -131,6 +129,8 @@ public class SqlTableSerializer implements TableSerializer {
                 output.write(';');
                 output.write('\n');
             }
+        } catch (Exception e) {
+            throw new IOException(e.getMessage(), e);
         }
     }
 

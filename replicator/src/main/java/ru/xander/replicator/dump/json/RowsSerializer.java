@@ -4,9 +4,9 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import ru.xander.replicator.dump.DumpUtils;
-import ru.xander.replicator.dump.data.TableField;
-import ru.xander.replicator.dump.data.TableRow;
-import ru.xander.replicator.dump.data.TableRowExtractor;
+import ru.xander.replicator.schema.TableField;
+import ru.xander.replicator.schema.TableRow;
+import ru.xander.replicator.schema.TableRowCursor;
 
 import java.io.IOException;
 import java.sql.Blob;
@@ -15,12 +15,12 @@ import java.util.Date;
 /**
  * @author Alexander Shakhov
  */
-public class RowsSerializer extends JsonSerializer<TableRowExtractor> {
+public class RowsSerializer extends JsonSerializer<TableRowCursor> {
     @Override
-    public void serialize(TableRowExtractor rowExtractor, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+    public void serialize(TableRowCursor cursor, JsonGenerator gen, SerializerProvider serializers) throws IOException {
         gen.writeStartArray();
         TableRow row;
-        while ((row = rowExtractor.nextRow()) != null) {
+        while ((row = cursor.nextRow()) != null) {
             gen.writeStartObject();
             for (TableField field : row.getFields()) {
                 gen.writeObjectFieldStart(field.getColumn().getName());

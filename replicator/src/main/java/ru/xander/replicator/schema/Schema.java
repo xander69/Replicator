@@ -65,6 +65,8 @@ public interface Schema extends AutoCloseable {
 
     void analyzeTable(Table table);
 
+    TableRowCursor selectRows(Table table, long verboseEach);
+
     BatchExecutor createBatchExecutor();
 
 }

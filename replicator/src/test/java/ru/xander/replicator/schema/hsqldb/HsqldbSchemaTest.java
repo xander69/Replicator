@@ -6,6 +6,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import ru.xander.replicator.TestUtils;
+import ru.xander.replicator.schema.AbstractSchema;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnType;
@@ -14,7 +15,7 @@ import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.IndexType;
 import ru.xander.replicator.schema.PrimaryKey;
-import ru.xander.replicator.schema.SchemaConnection;
+import ru.xander.replicator.schema.SchemaFactory;
 import ru.xander.replicator.schema.Table;
 
 import java.util.Collection;
@@ -29,28 +30,28 @@ import static org.hamcrest.collection.IsIterableContainingInOrder.contains;
 @SuppressWarnings("SameParameterValue")
 public class HsqldbSchemaTest {
 
-    private static SchemaConnection schemaConnection;
+    private static AbstractSchema schema;
 
     @BeforeClass
     public static void setUp() throws Exception {
-        schemaConnection = new SchemaConnection(TestUtils.sourceSchemaHsqldb());
-        TestUtils.initHsqldbSchema(schemaConnection.getConnection());
+        schema = (AbstractSchema) SchemaFactory.getInstance().create(TestUtils.sourceSchemaHsqldb());
+        TestUtils.initHsqldbSchema(schema.getConnection());
     }
 
     @AfterClass
     public static void tearDown() {
-        schemaConnection.close();
+        schema.close();
     }
 
     @Test
     public void getTables() {
-        List<String> actual = schemaConnection.getSchema().getTables();
+        List<String> actual = schema.getTables();
         MatcherAssert.assertThat(actual, contains("TABLE1", "TABLE2", "TABLE3", "TABLE4"));
     }
 
     @Test
     public void getTableWithColumns() {
-        Table table1 = schemaConnection.getSchema().getTable("TABLE1");
+        Table table1 = schema.getTable("TABLE1");
 
         Assert.assertNotNull(table1);
         Assert.assertEquals("DV", table1.getSchema());
@@ -59,7 +60,7 @@ public class HsqldbSchemaTest {
 
         Collection<Column> columns = table1.getColumns();
         Assert.assertNotNull(columns);
-        Assert.assertEquals(32, columns.size());
+        Assert.assertEquals(33, columns.size());
         Iterator<Column> columnIterator = columns.iterator();
         assertColumn(columnIterator.next(), 1, "BOOL", ColumnType.BOOLEAN);
         assertColumn(columnIterator.next(), 2, "INT1", ColumnType.INTEGER, "Integer field for Table 1", "100");
@@ -76,23 +77,24 @@ public class HsqldbSchemaTest {
         assertColumn(columnIterator.next(), 13, "BIG", ColumnType.INTEGER);
         assertColumn(columnIterator.next(), 14, "FLOAT1", ColumnType.FLOAT);
         assertColumn(columnIterator.next(), 15, "FLOAT2", ColumnType.FLOAT);
-        assertColumn(columnIterator.next(), 16, "REAL_", ColumnType.FLOAT);
-        assertColumn(columnIterator.next(), 17, "CHR1", ColumnType.CHAR);
-        assertColumn(columnIterator.next(), 18, "CHR2", ColumnType.CHAR, 5);
-        assertColumn(columnIterator.next(), 19, "CHR3", ColumnType.CHAR);
-        assertColumn(columnIterator.next(), 20, "CHR4", ColumnType.CHAR, 10);
-        assertColumn(columnIterator.next(), 21, "STRING1", ColumnType.STRING, 500);
-        assertColumn(columnIterator.next(), 22, "STRING2", ColumnType.STRING, 50000000);
-        assertColumn(columnIterator.next(), 23, "DATE_", ColumnType.DATE);
-        assertColumn(columnIterator.next(), 24, "DATETIME_", ColumnType.TIMESTAMP);
-        assertColumn(columnIterator.next(), 25, "TIME_", ColumnType.TIME);
-        assertColumn(columnIterator.next(), 26, "TIMESTAMP_", ColumnType.TIMESTAMP);
-        assertColumn(columnIterator.next(), 27, "CLOB1", ColumnType.CLOB);
-        assertColumn(columnIterator.next(), 28, "CLOB2", ColumnType.CLOB, 10000);
-        assertColumn(columnIterator.next(), 29, "BLOB1", ColumnType.BLOB);
-        assertColumn(columnIterator.next(), 30, "BLOB2", ColumnType.BLOB, 10000);
-        assertColumn(columnIterator.next(), 31, "BIN", ColumnType.BLOB);
-        assertColumn(columnIterator.next(), 32, "VARBIN", ColumnType.BLOB, 10000);
+        assertColumn(columnIterator.next(), 16, "FLOAT3", ColumnType.FLOAT);
+        assertColumn(columnIterator.next(), 17, "REAL_", ColumnType.FLOAT);
+        assertColumn(columnIterator.next(), 18, "CHR1", ColumnType.CHAR);
+        assertColumn(columnIterator.next(), 19, "CHR2", ColumnType.CHAR, 5);
+        assertColumn(columnIterator.next(), 20, "CHR3", ColumnType.CHAR);
+        assertColumn(columnIterator.next(), 21, "CHR4", ColumnType.CHAR, 10);
+        assertColumn(columnIterator.next(), 22, "STRING1", ColumnType.STRING, 500);
+        assertColumn(columnIterator.next(), 23, "STRING2", ColumnType.STRING, 50000000);
+        assertColumn(columnIterator.next(), 24, "DATE_", ColumnType.DATE);
+        assertColumn(columnIterator.next(), 25, "DATETIME_", ColumnType.TIMESTAMP);
+        assertColumn(columnIterator.next(), 26, "TIME_", ColumnType.TIME);
+        assertColumn(columnIterator.next(), 27, "TIMESTAMP_", ColumnType.TIMESTAMP);
+        assertColumn(columnIterator.next(), 28, "CLOB1", ColumnType.CLOB);
+        assertColumn(columnIterator.next(), 29, "CLOB2", ColumnType.CLOB, 10000);
+        assertColumn(columnIterator.next(), 30, "BLOB1", ColumnType.BLOB);
+        assertColumn(columnIterator.next(), 31, "BLOB2", ColumnType.BLOB, 10000);
+        assertColumn(columnIterator.next(), 32, "BIN", ColumnType.BLOB);
+        assertColumn(columnIterator.next(), 33, "VARBIN", ColumnType.BLOB, 10000);
 
         Column firstColumn = table1.getColumn("BOOL");
         Assert.assertNotNull(firstColumn);
@@ -101,13 +103,13 @@ public class HsqldbSchemaTest {
         Assert.assertTrue(firstColumn.isNullable());
         Assert.assertNull(table1.getColumn("XXX"));
 
-        Table xxx = schemaConnection.getSchema().getTable("XXX");
+        Table xxx = schema.getTable("XXX");
         Assert.assertNull(xxx);
     }
 
     @Test
     public void getTableWithConstraints() {
-        Table table2 = schemaConnection.getSchema().getTable("TABLE2");
+        Table table2 = schema.getTable("TABLE2");
         Assert.assertNotNull(table2);
         Assert.assertEquals("TABLE2", table2.getName());
 
@@ -150,7 +152,7 @@ public class HsqldbSchemaTest {
         Assert.assertEquals(exportedKey, table2.getExportedKey("TAB3_FK"));
         Assert.assertNull(table2.getExportedKey("XXX"));
 
-        Table table3 = schemaConnection.getSchema().getTable("TABLE3");
+        Table table3 = schema.getTable("TABLE3");
         Assert.assertNotNull(table3);
         Assert.assertEquals("TABLE3", table3.getName());
 
@@ -178,7 +180,7 @@ public class HsqldbSchemaTest {
 
     @Test
     public void getTableWithIndices() {
-        Table table4 = schemaConnection.getSchema().getTable("TABLE4");
+        Table table4 = schema.getTable("TABLE4");
         Assert.assertNotNull(table4);
         Assert.assertEquals("TABLE4", table4.getName());
 

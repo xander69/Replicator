@@ -3,10 +3,10 @@ package ru.xander.replicator.dump;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.util.StdDateFormat;
-import ru.xander.replicator.dump.data.TableRowExtractor;
 import ru.xander.replicator.dump.json.JsonDump;
-import ru.xander.replicator.schema.SchemaConnection;
+import ru.xander.replicator.schema.Schema;
 import ru.xander.replicator.schema.Table;
+import ru.xander.replicator.schema.TableRowCursor;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -16,8 +16,8 @@ import java.io.OutputStream;
  */
 public class JsonTableSerializer implements TableSerializer {
     @Override
-    public void serialize(Table table, SchemaConnection schemaConnection, OutputStream output, DumpOptions options) throws IOException {
-        try (TableRowExtractor rowExtractor = new TableRowExtractor(schemaConnection, table)) {
+    public void serialize(Table table, Schema schema, OutputStream output, DumpOptions options) throws IOException {
+        try (TableRowCursor cursor = schema.selectRows(table, options.getVerboseEach())) {
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.setDateFormat(new StdDateFormat().withColonInTimeZone(true));
             if (options.isFormat()) {
@@ -28,9 +28,11 @@ public class JsonTableSerializer implements TableSerializer {
                 dump.setTable(table);
             }
             if (options.isDumpDml()) {
-                dump.setRowExtractor(rowExtractor);
+                dump.setCursor(cursor);
             }
             objectMapper.writeValue(output, dump);
+        } catch (Exception e) {
+            throw new IOException(e.getMessage(), e);
         }
     }
 }
