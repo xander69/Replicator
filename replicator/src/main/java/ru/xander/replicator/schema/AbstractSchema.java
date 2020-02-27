@@ -63,10 +63,18 @@ public abstract class AbstractSchema implements Schema {
     }
 
     protected void execute(String sql) {
+        execute(sql, false);
+    }
+
+    protected void execute(String sql, boolean suppressException) {
         try (Statement statement = connection.createStatement()) {
             statement.execute(sql);
         } catch (SQLException e) {
-            throw new QueryFailedException(sql, e);
+            if (suppressException) {
+                warning(e.getMessage() + "\nQuery:\n" + sql);
+            } else {
+                throw new QueryFailedException(sql, e);
+            }
         }
     }
 

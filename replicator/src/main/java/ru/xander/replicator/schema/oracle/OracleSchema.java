@@ -161,7 +161,7 @@ public class OracleSchema extends AbstractSchema {
         if (!isObjectExists(checkConstraint.getName(), "CONSTRAINT")) {
             String sql = dialect.createCheckConstraintQuery(checkConstraint);
             alter(CREATE_CHECK_CONSTRAINT, checkConstraint.getTable().getName(), checkConstraint.getName(), sql);
-            execute(sql);
+            execute(sql, true);
         }
     }
 
@@ -169,7 +169,7 @@ public class OracleSchema extends AbstractSchema {
     public void dropConstraint(Constraint constraint) {
         String sql = dialect.dropConstraintQuery(constraint);
         alter(DROP_CONSTRAINT, constraint.getTable().getName(), constraint.getName(), sql);
-        execute(sql);
+        execute(sql, true);
     }
 
     @Override
