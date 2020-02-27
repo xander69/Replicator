@@ -2,7 +2,6 @@ package ru.xander.replicator.schema.hsqldb;
 
 import ru.xander.replicator.exception.SchemaException;
 import ru.xander.replicator.filter.Filter;
-import ru.xander.replicator.listener.Listener;
 import ru.xander.replicator.schema.AbstractSchema;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
@@ -15,13 +14,13 @@ import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.IndexType;
 import ru.xander.replicator.schema.PrimaryKey;
+import ru.xander.replicator.schema.SchemaConfig;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.schema.VendorType;
 import ru.xander.replicator.util.StringUtils;
 
-import java.sql.Connection;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -33,8 +32,8 @@ public class HsqldbSchema extends AbstractSchema {
     private final HsqldbDialect dialect;
     private final HsqldbSchemaQueries schemaQueries;
 
-    public HsqldbSchema(Connection connection, Listener listener, String workSchema) {
-        super(connection, listener);
+    public HsqldbSchema(SchemaConfig config) {
+        super(config);
         this.dialect = new HsqldbDialect(workSchema);
         this.schemaQueries = new HsqldbSchemaQueries(workSchema);
     }

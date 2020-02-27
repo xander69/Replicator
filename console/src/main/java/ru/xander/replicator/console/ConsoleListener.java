@@ -38,7 +38,7 @@ public class ConsoleListener implements Listener {
     }
 
     @Override
-    public void error(Exception e, String sql) {
+    public void errorSql(Exception e, String sql) {
         if (sql == null) {
             log.error("<{}> {}", schema, e.getMessage());
         } else {

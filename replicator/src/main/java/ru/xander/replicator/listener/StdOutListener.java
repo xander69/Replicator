@@ -35,7 +35,12 @@ public class StdOutListener implements Listener {
     }
 
     @Override
-    public void error(Exception e, String sql) {
+    public void error(Exception e) {
+        printMessage(WHITE_AND_RED_BG + "Error: " + e.getMessage() + RESET);
+    }
+
+    @Override
+    public void errorSql(Exception e, String sql) {
         String message = WHITE_AND_RED_BG + "Error: " + e.getMessage();
         if (sql != null) {
             message += RESET + "\n" + RED + sql;

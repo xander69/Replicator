@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * @author Alexander Shakhov
  */
-public interface Schema {
+public interface Schema extends AutoCloseable {
 
     VendorType getVendorType();
 

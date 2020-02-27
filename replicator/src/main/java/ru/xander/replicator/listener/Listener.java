@@ -12,7 +12,11 @@ public interface Listener {
         // do nothing
     }
 
-    default void error(Exception e, String sql) {
+    default void error(Exception e) {
+        // do nothing
+    }
+
+    default void errorSql(Exception e, String sql) {
         // do nothing
     }
 

@@ -2,7 +2,6 @@ package ru.xander.replicator.schema.oracle;
 
 import ru.xander.replicator.filter.Filter;
 import ru.xander.replicator.listener.AlterType;
-import ru.xander.replicator.listener.Listener;
 import ru.xander.replicator.schema.AbstractSchema;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
@@ -15,6 +14,7 @@ import ru.xander.replicator.schema.ExportedKey;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.PrimaryKey;
+import ru.xander.replicator.schema.SchemaConfig;
 import ru.xander.replicator.schema.SchemaUtils;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
@@ -23,7 +23,6 @@ import ru.xander.replicator.schema.VendorType;
 import ru.xander.replicator.util.StringUtils;
 
 import java.math.BigInteger;
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -36,13 +35,11 @@ import static ru.xander.replicator.listener.AlterType.*;
  */
 public class OracleSchema extends AbstractSchema {
 
-    private final String workSchema;
     private final OracleDialect dialect;
     private final OracleSchemaQueries schemaQueries;
 
-    public OracleSchema(Connection connection, Listener listener, String workSchema) {
-        super(connection, listener);
-        this.workSchema = workSchema;
+    public OracleSchema(SchemaConfig config) {
+        super(config);
         this.dialect = new OracleDialect(workSchema);
         this.schemaQueries = new OracleSchemaQueries(workSchema);
     }

@@ -1,10 +1,8 @@
 package ru.xander.replicator.schema;
 
 import ru.xander.replicator.exception.ReplicatorException;
-import ru.xander.replicator.exception.UnsupportedDriverException;
+import ru.xander.replicator.exception.SchemaException;
 import ru.xander.replicator.listener.Listener;
-import ru.xander.replicator.schema.hsqldb.HsqldbSchema;
-import ru.xander.replicator.schema.oracle.OracleSchema;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -15,57 +13,47 @@ import java.sql.SQLException;
  */
 public class SchemaConnection implements AutoCloseable {
 
-    private final Connection connection;
-    private final Schema schema;
+    private final String jdbcDriver;
+    private final String jdbcUrl;
+    private final String username;
+    private final String password;
     private final Listener listener;
+    private Connection connection;
 
-    public SchemaConnection(SchemaConfig config) {
-        try {
-            this.listener = config.getListener();
-            final String jdbcDriver = config.getJdbcDriver();
-            if ("oracle.jdbc.OracleDriver".equals(jdbcDriver)) {
-                notify("Connect to " + config.getJdbcUrl());
-                Class.forName(config.getJdbcDriver());
-                this.connection = DriverManager.getConnection(config.getJdbcUrl(), config.getUsername(), config.getPassword());
-                this.schema = new OracleSchema(connection, listener, config.getWorkSchema());
-            } else if ("org.hsqldb.jdbc.JDBCDriver".equals(jdbcDriver)) {
-                notify("Connect to " + config.getJdbcUrl());
-                Class.forName(config.getJdbcDriver());
-                this.connection = DriverManager.getConnection(config.getJdbcUrl(), config.getUsername(), config.getPassword());
-                this.schema = new HsqldbSchema(connection, listener, config.getWorkSchema());
-            } else {
-                throw new UnsupportedDriverException(jdbcDriver);
+    public SchemaConnection(SchemaConfig config, Listener listener) {
+        this.jdbcDriver = config.getJdbcDriver();
+        this.jdbcUrl = config.getJdbcUrl();
+        this.username = config.getUsername();
+        this.password = config.getPassword();
+        this.listener = listener;
+    }
+
+    public Connection getJdbcConnection() {
+        if (connection == null) {
+            try {
+                notify("Connect to " + jdbcUrl + "...");
+                Class.forName(jdbcDriver);
+                connection = DriverManager.getConnection(jdbcUrl, username, password);
+            } catch (SQLException | ClassNotFoundException e) {
+                error(e);
+                String errorMessage = String.format(
+                        "Error occurred while connecting to schema %s: %s",
+                        jdbcUrl, e.getMessage());
+                throw new SchemaException(errorMessage);
             }
-        } catch (ReplicatorException e) {
-            throw e;
-        } catch (Exception e) {
-            String errorMessage = String.format(
-                    "Error occurred while connecting to schema %s: %s",
-                    config.getJdbcUrl(), e.getMessage());
-            throw new ReplicatorException(errorMessage, e);
         }
-    }
-
-    public Connection getConnection() {
         return connection;
-    }
-
-    public Schema getSchema() {
-        return schema;
-    }
-
-    public Listener getListener() {
-        return listener;
     }
 
     @Override
     public void close() {
         try {
             if (this.connection != null) {
-                notify("Close connection");
+                notify("Close connection.");
                 this.connection.close();
             }
         } catch (SQLException e) {
+            error(e);
             String errorMessage = "Failed to close connection: " + e.getMessage();
             throw new ReplicatorException(errorMessage, e);
         }
@@ -74,6 +62,12 @@ public class SchemaConnection implements AutoCloseable {
     private void notify(String message) {
         if (listener != null) {
             listener.notify(message);
+        }
+    }
+
+    private void error(Exception e) {
+        if (listener != null) {
+            listener.error(e);
         }
     }
 }

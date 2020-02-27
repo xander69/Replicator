@@ -8,7 +8,6 @@ import ru.xander.replicator.listener.Listener;
 import ru.xander.replicator.util.DataSetMapper;
 import ru.xander.replicator.util.RowMapper;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -21,12 +20,14 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractSchema implements Schema {
 
-    private final Connection connection;
-    protected final Listener listener;
+    private final SchemaConnection connection;
+    private final Listener listener;
+    protected final String workSchema;
 
-    public AbstractSchema(Connection connection, Listener listener) {
-        this.connection = connection;
-        this.listener = listener;
+    public AbstractSchema(SchemaConfig config) {
+        this.listener = config.getListener();
+        this.workSchema = config.getWorkSchema();
+        this.connection = new SchemaConnection(config, listener);
     }
 
     @Override
@@ -34,9 +35,19 @@ public abstract class AbstractSchema implements Schema {
         return getTables(Collections.emptyList());
     }
 
+    @Override
+    public BatchExecutor createBatchExecutor() {
+        return new BatchExecutor(connection.getJdbcConnection());
+    }
+
+    @Override
+    public void close() {
+        this.connection.close();
+    }
+
     protected <T> T selectOne(String sql, RowMapper<T> mapper) {
         try (
-                Statement statement = connection.createStatement();
+                Statement statement = connection.getJdbcConnection().createStatement();
                 ResultSet resultSet = statement.executeQuery(sql)
         ) {
             if (resultSet.next()) {
@@ -45,19 +56,21 @@ public abstract class AbstractSchema implements Schema {
                 return null;
             }
         } catch (Exception e) {
+            error(e, sql);
             throw new QueryFailedException(sql, e);
         }
     }
 
     protected void select(String sql, DataSetMapper mapper) {
         try (
-                Statement statement = connection.createStatement();
+                Statement statement = connection.getJdbcConnection().createStatement();
                 ResultSet resultSet = statement.executeQuery(sql)
         ) {
             while (resultSet.next()) {
                 mapper.map(resultSet);
             }
         } catch (Exception e) {
+            error(e, sql);
             throw new QueryFailedException(sql, e);
         }
     }
@@ -67,20 +80,16 @@ public abstract class AbstractSchema implements Schema {
     }
 
     protected void execute(String sql, boolean suppressException) {
-        try (Statement statement = connection.createStatement()) {
+        try (Statement statement = connection.getJdbcConnection().createStatement()) {
             statement.execute(sql);
         } catch (SQLException e) {
             if (suppressException) {
                 warning(e.getMessage() + "\nQuery:\n" + sql);
             } else {
+                error(e, sql);
                 throw new QueryFailedException(sql, e);
             }
         }
-    }
-
-    @Override
-    public BatchExecutor createBatchExecutor() {
-        return new BatchExecutor(connection);
     }
 
     protected void notify(String message) {
@@ -97,7 +106,7 @@ public abstract class AbstractSchema implements Schema {
 
     protected void error(Exception e, String sql) {
         if (listener != null) {
-            listener.error(e, sql);
+            listener.errorSql(e, sql);
         }
     }
 
