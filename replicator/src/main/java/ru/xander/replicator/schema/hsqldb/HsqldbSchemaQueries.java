@@ -1,7 +1,6 @@
 package ru.xander.replicator.schema.hsqldb;
 
 import ru.xander.replicator.filter.Filter;
-import ru.xander.replicator.filter.FilterType;
 import ru.xander.replicator.schema.Table;
 
 import java.util.List;

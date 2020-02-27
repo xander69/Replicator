@@ -236,4 +236,11 @@ final class OracleSchemaQueries {
                 "      AND OBJECT_NAME = '" + objectName + "'\n" +
                 "      AND OBJECT_TYPE = '" + objectType + '\'';
     }
+
+    String selectConstraint(String constraintName) {
+        return "SELECT *\n" +
+                "FROM SYS.ALL_CONSTRAINTS\n" +
+                "WHERE OWNER = '" + workSchema + "'\n" +
+                "      AND CONSTRAINT_NAME = '" + constraintName + '\'';
+    }
 }

@@ -158,8 +158,11 @@ public class OracleSchema extends AbstractSchema {
 
     @Override
     public void createCheckConstraint(CheckConstraint checkConstraint) {
-        // do nothing
-        // чек-констрейнт будет создаваться вместе со столбцом
+        if (!isObjectExists(checkConstraint.getName(), "CONSTRAINT")) {
+            String sql = dialect.createCheckConstraintQuery(checkConstraint);
+            alter(CREATE_CHECK_CONSTRAINT, checkConstraint.getTable().getName(), checkConstraint.getName(), sql);
+            execute(sql);
+        }
     }
 
     @Override
@@ -255,7 +258,7 @@ public class OracleSchema extends AbstractSchema {
     }
 
     private List<String> findTables(List<Filter> filterList) {
-        notify("Find tables (" + filterListToString(filterList) + ")");
+        notify("Find tables: " + filterListToString(filterList));
         List<String> tableList = new LinkedList<>();
         select(schemaQueries.selectTables(filterList), rs -> tableList.add(rs.getString("TABLE_NAME")));
         return tableList;
@@ -422,7 +425,12 @@ public class OracleSchema extends AbstractSchema {
     }
 
     private boolean isObjectExists(String objectName, String objectType) {
-        Boolean exists = selectOne(schemaQueries.selectObject(objectName, objectType), rs -> true);
+        Boolean exists;
+        if (objectType.equalsIgnoreCase("CONSTRAINT")) {
+            exists = selectOne(schemaQueries.selectConstraint(objectName), rs -> true);
+        } else {
+            exists = selectOne(schemaQueries.selectObject(objectName, objectType), rs -> true);
+        }
         return (exists != null);
     }
 
