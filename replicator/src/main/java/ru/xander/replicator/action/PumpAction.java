@@ -4,7 +4,6 @@ import ru.xander.replicator.exception.ReplicatorException;
 import ru.xander.replicator.schema.BatchExecutor;
 import ru.xander.replicator.schema.Schema;
 import ru.xander.replicator.schema.SchemaConfig;
-import ru.xander.replicator.schema.SchemaConnection;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -30,11 +29,11 @@ public class PumpAction implements Action {
     }
 
     public void execute() {
-        try (SchemaConnection schemaConnection = new SchemaConnection(schemaConfig)) {
+        withSchema(schemaConfig, schema -> {
             for (File scriptFile : scriptFiles) {
-                pumpScript(schemaConnection.getSchema(), scriptFile);
+                pumpScript(schema, scriptFile);
             }
-        }
+        });
     }
 
     private void pumpScript(Schema target, File scriptFile) {

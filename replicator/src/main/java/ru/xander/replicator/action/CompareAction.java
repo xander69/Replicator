@@ -13,7 +13,6 @@ import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Schema;
 import ru.xander.replicator.schema.SchemaConfig;
-import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.SchemaUtils;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
@@ -57,17 +56,14 @@ public class CompareAction implements Action {
     }
 
     public Map<String, CompareResult> execute() {
-        try (
-                SchemaConnection source = new SchemaConnection(sourceConfig);
-                SchemaConnection target = new SchemaConnection(targetConfig)
-        ) {
+        return withTwoSchemasAndReturn(sourceConfig, targetConfig, (source, target) -> {
             Map<String, CompareResult> resultMap = new HashMap<>();
             for (String tableName : tables) {
-                CompareResult compareResult = compareTable(tableName, source.getSchema(), target.getSchema());
+                CompareResult compareResult = compareTable(tableName, source, target);
                 resultMap.put(tableName, compareResult);
             }
             return resultMap;
-        }
+        });
     }
 
     private CompareResult compareTable(String tableName, Schema source, Schema target) {

@@ -4,7 +4,6 @@ import ru.xander.replicator.exception.ReplicatorException;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Schema;
 import ru.xander.replicator.schema.SchemaConfig;
-import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
 
@@ -33,12 +32,12 @@ public class DropAction implements Action {
     }
 
     public void execute() {
-        try (SchemaConnection schema = new SchemaConnection(schemaConfig)) {
+        withSchema(schemaConfig, schema -> {
             for (String tableName : tables) {
                 Set<String> droppedTables = new HashSet<>();
-                dropTable(tableName, schema.getSchema(), droppedTables);
+                dropTable(tableName, schema, droppedTables);
             }
-        }
+        });
     }
 
     private void dropTable(String tableName, Schema schema, Set<String> droppedTables) {

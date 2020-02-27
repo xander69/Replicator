@@ -7,8 +7,8 @@ import ru.xander.replicator.dump.SqlTableSerializer;
 import ru.xander.replicator.dump.TableSerializer;
 import ru.xander.replicator.dump.XmlTableSerializer;
 import ru.xander.replicator.exception.ReplicatorException;
+import ru.xander.replicator.schema.Schema;
 import ru.xander.replicator.schema.SchemaConfig;
-import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.Table;
 
 import java.io.OutputStream;
@@ -39,13 +39,11 @@ public class DumpAction implements Action {
     }
 
     public void execute() {
-        try (SchemaConnection schemaConnection = new SchemaConnection(schemaConfig)) {
-            dumpTable(schemaConnection);
-        }
+        withSchema(schemaConfig, this::dumpTable);
     }
 
-    private void dumpTable(SchemaConnection schemaConnection) {
-        Table table = schemaConnection.getSchema().getTable(tableName);
+    private void dumpTable(Schema schema) {
+        Table table = schema.getTable(tableName);
         if (table == null) {
             throw new ReplicatorException("Table " + tableName + " not found");
         }
@@ -64,7 +62,7 @@ public class DumpAction implements Action {
                 throw new ReplicatorException("Unsupported dump type <" + dumpType + ">");
         }
         try {
-            tableSerializer.serialize(table, schemaConnection, output, options);
+            tableSerializer.serialize(table, schema, output, options);
         } catch (Exception e) {
             String errorMessage = "Failed to dump table " + tableName + ": " + e.getMessage();
             throw new ReplicatorException(errorMessage, e);

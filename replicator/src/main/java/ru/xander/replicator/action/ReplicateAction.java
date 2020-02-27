@@ -10,7 +10,6 @@ import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.PrimaryKey;
 import ru.xander.replicator.schema.Schema;
 import ru.xander.replicator.schema.SchemaConfig;
-import ru.xander.replicator.schema.SchemaConnection;
 import ru.xander.replicator.schema.SchemaUtils;
 import ru.xander.replicator.schema.Sequence;
 import ru.xander.replicator.schema.Table;
@@ -55,15 +54,12 @@ public class ReplicateAction implements Action {
     }
 
     public void execute() {
-        try (
-                SchemaConnection source = new SchemaConnection(sourceConfig);
-                SchemaConnection target = new SchemaConnection(targetConfig)
-        ) {
+        withTwoSchemas(sourceConfig, targetConfig, (source, target) -> {
             for (String tableName : tables) {
                 Set<String> createdTables = new HashSet<>();
-                replicateTable(tableName, source.getSchema(), target.getSchema(), createdTables);
+                replicateTable(tableName, source, target, createdTables);
             }
-        }
+        });
     }
 
     private void replicateTable(String tableName, Schema source, Schema target, Set<String> createdTables) {
