@@ -41,6 +41,17 @@ public abstract class AbstractSchema implements Schema {
     }
 
     @Override
+    public SchemaConnectionTest testConnection() {
+        try (Statement statement = connection.getJdbcConnection().createStatement()) {
+            statement.execute(getDialect().testQuery());
+            return new SchemaConnectionTest(true, null);
+        } catch (Exception e) {
+            warning("Failed to test connection: " + e.getMessage());
+            return new SchemaConnectionTest(false, e.getMessage());
+        }
+    }
+
+    @Override
     public List<String> getTables() {
         return getTables(Collections.emptyList());
     }

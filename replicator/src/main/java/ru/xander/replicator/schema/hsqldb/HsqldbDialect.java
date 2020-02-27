@@ -24,6 +24,11 @@ public class HsqldbDialect extends AbstractDialect {
     }
 
     @Override
+    public String testQuery() {
+        return "SELECT 1 FROM INFORMATION_SCHEMA.SYSTEM_USERS";
+    }
+
+    @Override
     public String createTableQuery(Table table) {
         return "CREATE TABLE " + getQualifiedName(table) + '\n' +
                 "(\n    " + table

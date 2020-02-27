@@ -31,6 +31,11 @@ class OracleDialect extends AbstractDialect {
     }
 
     @Override
+    public String testQuery() {
+        return "SELECT 1 FROM DUAL";
+    }
+
+    @Override
     public String createTableQuery(Table table) {
         return "CREATE TABLE " + getQualifiedName(table) + '\n' +
                 "(\n    " + table

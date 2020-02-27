@@ -5,6 +5,7 @@ import org.junit.Test;
 import ru.xander.replicator.compare.CompareResult;
 import ru.xander.replicator.compare.CompareResultType;
 import ru.xander.replicator.dump.DumpType;
+import ru.xander.replicator.schema.SchemaConnectionTest;
 
 import java.io.ByteArrayOutputStream;
 
@@ -13,6 +14,17 @@ import java.io.ByteArrayOutputStream;
  */
 @Ignore
 public class ReplicatorTest {
+
+    @Test
+    public void test() {
+        SchemaConnectionTest test = Replicator.test()
+                .schemaConfig(TestUtils.sourceSchemaOracle())
+                .configure()
+                .execute();
+        System.out.println("Valid: " + test.isValid());
+        System.out.println("Error message: " + test.getErrorMessage());
+    }
+
     @Test
     public void tableList() {
         Replicator.tableList()
@@ -68,6 +80,7 @@ public class ReplicatorTest {
                 .dumpDml(true)
                 .verboseEash(4)
                 .commitEach(5)
+                .format(true)
                 .configure()
                 .execute();
         System.out.println(output.toString());

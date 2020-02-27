@@ -10,19 +10,24 @@ import ru.xander.replicator.schema.AbstractSchema;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ColumnType;
+import ru.xander.replicator.schema.DataFormatter;
+import ru.xander.replicator.schema.Dialect;
 import ru.xander.replicator.schema.ExportedKey;
 import ru.xander.replicator.schema.ImportedKey;
 import ru.xander.replicator.schema.Index;
 import ru.xander.replicator.schema.IndexType;
 import ru.xander.replicator.schema.PrimaryKey;
+import ru.xander.replicator.schema.SchemaConnectionTest;
 import ru.xander.replicator.schema.SchemaFactory;
 import ru.xander.replicator.schema.Table;
+import ru.xander.replicator.schema.VendorType;
 
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
 import static org.hamcrest.collection.IsIterableContainingInOrder.contains;
+import static org.hamcrest.core.IsInstanceOf.instanceOf;
 
 /**
  * @author Alexander Shakhov
@@ -41,6 +46,25 @@ public class HsqldbSchemaTest {
     @AfterClass
     public static void tearDown() {
         schema.close();
+    }
+
+    @Test
+    public void testConnection() {
+        Assert.assertEquals(VendorType.HSQLDB, schema.getVendorType());
+        MatcherAssert.assertThat(schema, instanceOf(HsqldbSchema.class));
+
+        Dialect dialect = schema.getDialect();
+        Assert.assertNotNull(dialect);
+        MatcherAssert.assertThat(dialect, instanceOf(HsqldbDialect.class));
+
+        DataFormatter dataFormatter = schema.getDataFormatter();
+        Assert.assertNotNull(dataFormatter);
+        MatcherAssert.assertThat(dataFormatter, instanceOf(HsqldbDataFormatter.class));
+
+        SchemaConnectionTest schemaConnectionTest = schema.testConnection();
+        Assert.assertNotNull(schemaConnectionTest);
+        Assert.assertTrue(schemaConnectionTest.isValid());
+        Assert.assertNull(schemaConnectionTest.getErrorMessage());
     }
 
     @Test

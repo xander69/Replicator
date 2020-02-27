@@ -6,11 +6,16 @@ import ru.xander.replicator.action.DumpActionConfigurer;
 import ru.xander.replicator.action.PumpActionConfigurer;
 import ru.xander.replicator.action.ReplicateActionConfigurer;
 import ru.xander.replicator.action.TableListActionConfigurer;
+import ru.xander.replicator.action.TestActionConfigurer;
 
 /**
  * @author Alexander Shakhov
  */
 public final class Replicator {
+    public static TestActionConfigurer test() {
+        return new TestActionConfigurer();
+    }
+
     public static TableListActionConfigurer tableList() {
         return new TableListActionConfigurer();
     }

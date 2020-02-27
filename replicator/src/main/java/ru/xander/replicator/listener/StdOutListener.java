@@ -36,7 +36,7 @@ public class StdOutListener implements Listener {
 
     @Override
     public void error(Exception e) {
-        printMessage(WHITE_AND_RED_BG + "Error: " + e.getMessage() + RESET);
+        printMessage(WHITE_AND_RED_BG + "Error: " + e.getMessage().trim() + RESET);
     }
 
     @Override

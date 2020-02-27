@@ -4,6 +4,8 @@ package ru.xander.replicator.schema;
  * @author Alexander Shakhov
  */
 public interface Dialect {
+    String testQuery();
+
     String createTableQuery(Table table);
 
     String createTableCommentQuery(Table table);

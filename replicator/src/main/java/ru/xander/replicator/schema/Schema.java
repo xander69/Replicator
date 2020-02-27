@@ -9,6 +9,8 @@ import java.util.List;
  */
 public interface Schema extends AutoCloseable {
 
+    SchemaConnectionTest testConnection();
+
     VendorType getVendorType();
 
     Dialect getDialect();
