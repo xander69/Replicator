@@ -1,6 +1,8 @@
 package ru.xander.replicator.action;
 
 import ru.xander.replicator.exception.ReplicatorException;
+import ru.xander.replicator.filter.Filter;
+import ru.xander.replicator.filter.FilterType;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
 import ru.xander.replicator.schema.ImportedKey;
@@ -14,6 +16,7 @@ import ru.xander.replicator.schema.Table;
 import ru.xander.replicator.schema.Trigger;
 import ru.xander.replicator.util.StringUtils;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -67,10 +70,6 @@ public class ReplicateAction implements Action {
             return;
         }
 
-        // обновляем, если это запрашиваемая таблица (createdTables пустой)
-        // либо если это требуется параметрами
-        boolean update = createdTables.isEmpty() || updateImported;
-
         createdTables.add(tableName);
 
         Future<Table> sourceTableFuture = executorService.submit(() -> source.getTable(tableName));
@@ -90,19 +89,26 @@ public class ReplicateAction implements Action {
         }
 
         // зависимости реплицируем только если это требуется опцией updateImported
-        // либо если этой таблицы ещё нет в схеме.
-        // второе условие требуется, т.к. возможно в схеме так же нет зависимостей для требуемой таблицы
-        // поэтому нужно принудительно их создать
-        if (update || (targetTable == null)) {
+        if (updateImported) {
             sourceTable.getImportedKeys().forEach(importedKey -> {
                 String pkTableName = importedKey.getPkTableName();
                 replicateTable(pkTableName, source, target, createdTables);
+            });
+        } else {
+            // когда опция updateImported отключена, зависимости реплицируем только если их нет в приемнике
+            String importedTables = sourceTable.getImportedKeys().stream().map(ImportedKey::getPkTableName).collect(Collectors.joining(","));
+            List<String> importedList = target.getTables(Collections.singletonList(new Filter(FilterType.IN, importedTables)));
+            sourceTable.getImportedKeys().forEach(importedKey -> {
+                String pkTableName = importedKey.getPkTableName();
+                if (!importedList.contains(pkTableName)) {
+                    replicateTable(pkTableName, source, target, createdTables);
+                }
             });
         }
 
         if (targetTable == null) {
             createTable(target, sourceTable);
-        } else if (update) {
+        } else {
             updateTable(target, targetTable, sourceTable);
         }
     }

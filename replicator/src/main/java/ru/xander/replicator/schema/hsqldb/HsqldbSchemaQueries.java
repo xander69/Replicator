@@ -25,8 +25,18 @@ class HsqldbSchemaQueries {
                 .append("WHERE T.TABLE_SCHEM = UPPER('").append(workSchema).append("')\n");
         if (filterList != null) {
             for (Filter filter : filterList) {
-                String op = filter.getType() == FilterType.NOT_LIKE ? "NOT LIKE" : "LIKE";
-                sql.append("      AND T.TABLE_NAME ").append(op).append(" '").append(filter.getValue()).append("'\n");
+                switch (filter.getType()) {
+                    case LIKE:
+                        sql.append("      AND T.TABLE_NAME LIKE '").append(filter.getValue()).append("'\n");
+                        break;
+                    case NOT_LIKE:
+                        sql.append("      AND T.TABLE_NAME NOT LIKE '").append(filter.getValue()).append("'\n");
+                        break;
+                    case IN:
+                        String tableList = filter.getValue().replace(",", "', '");
+                        sql.append("      AND T.TABLE_NAME IN ('").append(tableList).append("')\n");
+                        break;
+                }
             }
         }
         sql.append("ORDER BY T.TABLE_NAME");

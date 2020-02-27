@@ -1,6 +1,7 @@
 package ru.xander.replicator.schema;
 
 import ru.xander.replicator.exception.QueryFailedException;
+import ru.xander.replicator.filter.Filter;
 import ru.xander.replicator.listener.Alter;
 import ru.xander.replicator.listener.AlterType;
 import ru.xander.replicator.listener.Listener;
@@ -13,6 +14,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author Alexander Shakhov
@@ -109,5 +111,12 @@ public abstract class AbstractSchema implements Schema {
             alter.setSql(sql);
             listener.alter(alter);
         }
+    }
+
+    protected static String filterListToString(List<Filter> filters) {
+        if (filters.isEmpty()) {
+            return "ALL";
+        }
+        return filters.stream().map(f -> f.getType() + " (" + f.getValue() + ')').collect(Collectors.joining(", "));
     }
 }

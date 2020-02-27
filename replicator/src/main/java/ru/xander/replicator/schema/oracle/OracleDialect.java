@@ -210,11 +210,11 @@ class OracleDialect extends AbstractDialect {
         if (sequence.getMaxValue() != null) {
             sql.append("MAXVALUE ").append(sequence.getMaxValue()).append('\n');
         }
-        if (sequence.getCacheSize() != null) {
+        if ((sequence.getCacheSize() != null) && (sequence.getCacheSize().intValue() > 0)) {
             sql.append("CACHE ").append(sequence.getCacheSize()).append("\n");
-        } else {
+        }/* else {
             sql.append("NOCACHE\n");
-        }
+        }*/
         if (Boolean.TRUE.equals(sequence.getCycle())) {
             sql.append("CYCLE");
         } else {
@@ -285,7 +285,7 @@ class OracleDialect extends AbstractDialect {
                 }
                 return dataTypeName + "(" + column.getSize() + ")";
             case FLOAT:
-                return dataTypeName + "(" + Math.min(column.getSize(), MAX_NUMBER_SIZE) + ", " + Math.min(column.getSize(), MAX_NUMBER_SCALE) + ")";
+                return dataTypeName + "(" + Math.min(column.getSize(), MAX_NUMBER_SIZE) + ", " + Math.min(column.getScale(), MAX_NUMBER_SCALE) + ")";
             case STRING:
                 if (column.getSize() > MAX_VARCHAR_SIZE) {
                     return "CLOB";

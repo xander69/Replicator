@@ -255,7 +255,7 @@ public class OracleSchema extends AbstractSchema {
     }
 
     private List<String> findTables(List<Filter> filterList) {
-        notify("Find tables");
+        notify("Find tables (" + filterListToString(filterList) + ")");
         List<String> tableList = new LinkedList<>();
         select(schemaQueries.selectTables(filterList), rs -> tableList.add(rs.getString("TABLE_NAME")));
         return tableList;

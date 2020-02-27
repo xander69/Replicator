@@ -5,5 +5,6 @@ package ru.xander.replicator.filter;
  */
 public enum FilterType {
     LIKE,
-    NOT_LIKE
+    NOT_LIKE,
+    IN
 }
