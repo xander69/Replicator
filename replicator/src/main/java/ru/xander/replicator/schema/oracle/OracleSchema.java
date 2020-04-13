@@ -2,6 +2,7 @@ package ru.xander.replicator.schema.oracle;
 
 import ru.xander.replicator.filter.Filter;
 import ru.xander.replicator.listener.AlterType;
+import ru.xander.replicator.listener.ModifyType;
 import ru.xander.replicator.schema.AbstractSchema;
 import ru.xander.replicator.schema.CheckConstraint;
 import ru.xander.replicator.schema.Column;
@@ -110,9 +111,47 @@ public class OracleSchema extends AbstractSchema {
     public void modifyColumn(Column oldColumn, Column newColumn) {
         ColumnDiff[] columnDiffs = SchemaUtils.compareColumns(oldColumn, newColumn);
         if (columnDiffs.length > 0) {
-            String sql = dialect.modifyColumnQuery(newColumn, columnDiffs);
-            alter(MODIFY_COLUMN, newColumn.getTable().getName(), newColumn.getName(), Arrays.toString(columnDiffs), sql);
-            execute(sql);
+            if (oldColumn.isNullable() && !newColumn.isNullable()) {
+                Table table = oldColumn.getTable();
+                CheckConstraint checkConstraint = SchemaUtils.getConstraintByColumnName(table.getCheckConstraints(), oldColumn.getName());
+                if (checkConstraint != null) {
+                    dropConstraint(checkConstraint);
+                }
+            }
+            if (ColumnDiff.DATATYPE.anyOf(columnDiffs)) {
+                int affectedRows;
+
+                String copyColumName = newColumn.getName() + '$';
+                Column copyColumn = newColumn.copy();
+                copyColumn.setName(copyColumName);
+
+                createColumn(copyColumn);
+
+                String updateCopyColumn = dialect.updateColumnQuery(copyColumn, oldColumn.getName());
+//                modify(ModifyType.UPDATE, copyColumn.getTable().getName(), updateCopyColumn);
+                affectedRows = update(updateCopyColumn);
+                modify(ModifyType.UPDATE, copyColumn.getTable().getName(), updateCopyColumn, affectedRows);
+
+                String nullOldColumn = dialect.updateColumnQuery(oldColumn, "NULL");
+//                modify(ModifyType.UPDATE, copyColumn.getTable().getName(), nullOldColumn);
+                affectedRows = update(nullOldColumn);
+                modify(ModifyType.UPDATE, copyColumn.getTable().getName(), nullOldColumn, affectedRows);
+
+                String sql = dialect.modifyColumnQuery(newColumn, columnDiffs);
+                alter(MODIFY_COLUMN, newColumn.getTable().getName(), newColumn.getName(), Arrays.toString(columnDiffs), sql);
+                execute(sql);
+
+                String updateOldColumn = dialect.updateColumnQuery(oldColumn, copyColumName);
+//                modify(ModifyType.UPDATE, copyColumn.getTable().getName(), updateOldColumn);
+                affectedRows = update(updateOldColumn);
+                modify(ModifyType.UPDATE, copyColumn.getTable().getName(), updateOldColumn, affectedRows);
+
+                dropColumn(copyColumn);
+            } else {
+                String sql = dialect.modifyColumnQuery(newColumn, columnDiffs);
+                alter(MODIFY_COLUMN, newColumn.getTable().getName(), newColumn.getName(), Arrays.toString(columnDiffs), sql);
+                execute(sql);
+            }
         }
     }
 

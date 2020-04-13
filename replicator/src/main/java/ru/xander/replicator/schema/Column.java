@@ -91,4 +91,18 @@ public class Column implements Comparable<Column> {
     public int compareTo(Column other) {
         return Integer.compare(number, other.number);
     }
+
+    public Column copy() {
+        Column column = new Column();
+        column.setTable(table);
+        column.setNumber(number);
+        column.setName(name);
+        column.setColumnType(columnType);
+        column.setSize(size);
+        column.setScale(scale);
+        column.setNullable(nullable);
+        column.setDefaultValue(defaultValue);
+        column.setComment(comment);
+        return column;
+    }
 }

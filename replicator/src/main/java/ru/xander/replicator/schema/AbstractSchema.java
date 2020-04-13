@@ -137,6 +137,24 @@ public abstract class AbstractSchema implements Schema {
         }
     }
 
+    protected int update(String sql) {
+        return update(sql, false);
+    }
+
+    protected int update(String sql, boolean suppressException) {
+        try (Statement statement = connection.getJdbcConnection().createStatement()) {
+            return statement.executeUpdate(sql);
+        } catch (SQLException e) {
+            if (suppressException) {
+                warning(e.getMessage() + "\nQuery:\n" + sql);
+                return 0;
+            } else {
+                error(e, sql);
+                throw new QueryFailedException(sql, e);
+            }
+        }
+    }
+
     protected void notify(String message) {
         if (listener != null) {
             listener.notify(message);
@@ -173,6 +191,10 @@ public abstract class AbstractSchema implements Schema {
             alter.setSql(sql);
             listener.alter(alter);
         }
+    }
+
+    protected void modify(ModifyType type, String tableName, String sql) {
+        modify(type, tableName, sql, null);
     }
 
     protected void modify(ModifyType type, String tableName, String sql, Integer affectedRows) {

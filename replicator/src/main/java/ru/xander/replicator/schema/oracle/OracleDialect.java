@@ -257,6 +257,11 @@ class OracleDialect extends AbstractDialect {
                 "FROM " + getQualifiedName(table);
     }
 
+    String updateColumnQuery(Column column, String value) {
+        return "UPDATE " + getQualifiedName(column.getTable()) + "\n" +
+                "SET " + column.getName() + " = " + value;
+    }
+
     private static String getColumnDefinition(Column column) {
         StringBuilder definition = new StringBuilder();
         definition.append(column.getName()).append(' ').append(getDataType(column));
