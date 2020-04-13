@@ -27,4 +27,8 @@ public interface Listener {
     default void progress(Progress progress) {
         // do nothing
     }
+
+    default void modify(Modify modify) {
+        // do nothing
+    }
 }

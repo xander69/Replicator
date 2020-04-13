@@ -6,6 +6,8 @@ import ru.xander.replicator.filter.Filter;
 import ru.xander.replicator.listener.Alter;
 import ru.xander.replicator.listener.AlterType;
 import ru.xander.replicator.listener.Listener;
+import ru.xander.replicator.listener.Modify;
+import ru.xander.replicator.listener.ModifyType;
 import ru.xander.replicator.listener.Progress;
 import ru.xander.replicator.util.DataSetMapper;
 import ru.xander.replicator.util.RowMapper;
@@ -170,6 +172,17 @@ public abstract class AbstractSchema implements Schema {
             alter.setExtra(extra);
             alter.setSql(sql);
             listener.alter(alter);
+        }
+    }
+
+    protected void modify(ModifyType type, String tableName, String sql, Integer affectedRows) {
+        if (listener != null) {
+            Modify modify = new Modify();
+            modify.setModifyType(type);
+            modify.setTableName(tableName);
+            modify.setSql(sql);
+            modify.setAffectedRows(affectedRows);
+            listener.modify(modify);
         }
     }
 

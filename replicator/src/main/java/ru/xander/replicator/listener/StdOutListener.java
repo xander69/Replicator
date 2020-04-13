@@ -72,6 +72,18 @@ public class StdOutListener implements Listener {
         printMessage(message);
     }
 
+    @Override
+    public void modify(Modify modify) {
+        String message = modify.getModifyType() + " on table " + modify.getTableName();
+        if (modify.getAffectedRows() != null) {
+            message += " (affected rows = " + modify.getAffectedRows() + ")";
+        }
+        if (modify.getSql() != null) {
+            message += "\n" + BRIGHT_BLACK + modify.getSql() + RESET;
+        }
+        printMessage(message);
+    }
+
     private synchronized void printMessage(String message) {
         System.out.println(dateFormat.format(new Date(System.currentTimeMillis())) + " <" + name + "> [" + Thread.currentThread().getName() + "] - " + message);
     }
