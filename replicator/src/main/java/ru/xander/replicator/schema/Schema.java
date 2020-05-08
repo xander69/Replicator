@@ -27,6 +27,8 @@ public interface Schema extends AutoCloseable {
 
     void dropTable(Table table);
 
+    void renameTable(Table table, String newName);
+
     void createTableComment(Table table);
 
     void createColumn(Column column);
@@ -34,6 +36,8 @@ public interface Schema extends AutoCloseable {
     void modifyColumn(Column oldColumn, Column newColumn);
 
     void dropColumn(Column column);
+
+    void renameColumn(Column column, String newName);
 
     void createColumnComment(Column column);
 

@@ -94,6 +94,13 @@ public class OracleSchema extends AbstractSchema {
     }
 
     @Override
+    public void renameTable(Table table, String newName) {
+        String sql = dialect.renameTableQuery(table, newName);
+        alter(RENAME_TABLE, table.getName(), sql);
+        execute(sql);
+    }
+
+    @Override
     public void createTableComment(Table table) {
         String sql = dialect.createTableCommentQuery(table);
         alter(CREATE_TABLE_COMMENT, table.getName(), sql);
@@ -119,7 +126,6 @@ public class OracleSchema extends AbstractSchema {
                 }
             }
             if (ColumnDiff.DATATYPE.anyOf(columnDiffs)) {
-                int affectedRows;
 
                 String copyColumName = newColumn.getName() + '$';
                 Column copyColumn = newColumn.copy();
@@ -129,24 +135,13 @@ public class OracleSchema extends AbstractSchema {
 
                 String updateCopyColumn = dialect.updateColumnQuery(copyColumn, oldColumn.getName());
 //                modify(ModifyType.UPDATE, copyColumn.getTable().getName(), updateCopyColumn);
-                affectedRows = update(updateCopyColumn);
+                int affectedRows = update(updateCopyColumn);
                 modify(ModifyType.UPDATE, copyColumn.getTable().getName(), updateCopyColumn, affectedRows);
 
-                String nullOldColumn = dialect.updateColumnQuery(oldColumn, "NULL");
-//                modify(ModifyType.UPDATE, copyColumn.getTable().getName(), nullOldColumn);
-                affectedRows = update(nullOldColumn);
-                modify(ModifyType.UPDATE, copyColumn.getTable().getName(), nullOldColumn, affectedRows);
+                dropColumn(oldColumn);
 
-                String sql = dialect.modifyColumnQuery(newColumn, columnDiffs);
-                alter(MODIFY_COLUMN, newColumn.getTable().getName(), newColumn.getName(), Arrays.toString(columnDiffs), sql);
-                execute(sql);
+                renameColumn(copyColumn, newColumn.getName());
 
-                String updateOldColumn = dialect.updateColumnQuery(oldColumn, copyColumName);
-//                modify(ModifyType.UPDATE, copyColumn.getTable().getName(), updateOldColumn);
-                affectedRows = update(updateOldColumn);
-                modify(ModifyType.UPDATE, copyColumn.getTable().getName(), updateOldColumn, affectedRows);
-
-                dropColumn(copyColumn);
             } else {
                 String sql = dialect.modifyColumnQuery(newColumn, columnDiffs);
                 alter(MODIFY_COLUMN, newColumn.getTable().getName(), newColumn.getName(), Arrays.toString(columnDiffs), sql);
@@ -159,6 +154,13 @@ public class OracleSchema extends AbstractSchema {
     public void dropColumn(Column column) {
         String sql = dialect.dropColumnQuery(column);
         alter(DROP_COLUMN, column.getTable().getName(), column.getName(), sql);
+        execute(sql);
+    }
+
+    @Override
+    public void renameColumn(Column column, String newName) {
+        String sql = dialect.renameColumnQuery(column, newName);
+        alter(RENAME_COLUMN, column.getTable().getName(), column.getName(), sql);
         execute(sql);
     }
 

@@ -60,6 +60,12 @@ class OracleDialect extends AbstractDialect {
     }
 
     @Override
+    public String renameTableQuery(Table table, String newName) {
+        //TODO: implement me
+        return null;
+    }
+
+    @Override
     public String createColumnQuery(Column column) {
         return "ALTER TABLE " + getQualifiedName(column.getTable()) + " ADD " + getColumnDefinition(column);
     }
@@ -95,6 +101,11 @@ class OracleDialect extends AbstractDialect {
     @Override
     public String dropColumnQuery(Column column) {
         return "ALTER TABLE " + getQualifiedName(column.getTable()) + " DROP COLUMN " + column.getName();
+    }
+
+    @Override
+    public String renameColumnQuery(Column column, String newName) {
+        return "ALTER TABLE " + getQualifiedName(column.getTable()) + " RENAME COLUMN " + column.getName() + " TO " + newName;
     }
 
     @Override

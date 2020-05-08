@@ -83,6 +83,11 @@ public class HsqldbSchema extends AbstractSchema {
     }
 
     @Override
+    public void renameTable(Table table, String newName) {
+
+    }
+
+    @Override
     public void createTableComment(Table table) {
 
     }
@@ -99,6 +104,11 @@ public class HsqldbSchema extends AbstractSchema {
 
     @Override
     public void dropColumn(Column column) {
+
+    }
+
+    @Override
+    public void renameColumn(Column column, String newName) {
 
     }
 

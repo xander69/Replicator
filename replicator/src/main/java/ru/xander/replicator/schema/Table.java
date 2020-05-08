@@ -85,10 +85,10 @@ public class Table {
         if ((primaryKey != null) && StringUtils.arrayContains(primaryKey.getColumns(), column.getName())) {
             primaryKey = null;
         }
-        importedKeyMap.entrySet().removeIf(key -> StringUtils.arrayContains(key.getValue().getColumns(), column.getName()));
-        exportedKeyMap.entrySet().removeIf(key -> StringUtils.arrayContains(key.getValue().getColumns(), column.getName()));
-        checkConstraintMap.entrySet().removeIf(key -> StringUtils.arrayContains(key.getValue().getColumns(), column.getName()));
-        indexMap.entrySet().removeIf(index -> StringUtils.arrayContains(index.getValue().getColumns(), column.getName()));
+        getImportedKeyMap().entrySet().removeIf(key -> StringUtils.arrayContains(key.getValue().getColumns(), column.getName()));
+        getExportedKeyMap().entrySet().removeIf(key -> StringUtils.arrayContains(key.getValue().getColumns(), column.getName()));
+        getCheckConstraintMap().entrySet().removeIf(key -> StringUtils.arrayContains(key.getValue().getColumns(), column.getName()));
+        getIndexMap().entrySet().removeIf(index -> StringUtils.arrayContains(index.getValue().getColumns(), column.getName()));
     }
 
     public PrimaryKey getPrimaryKey() {

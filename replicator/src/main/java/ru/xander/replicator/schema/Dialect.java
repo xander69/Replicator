@@ -12,11 +12,15 @@ public interface Dialect {
 
     String dropTableQuery(Table table);
 
+    String renameTableQuery(Table table, String newName);
+
     String createColumnQuery(Column column);
 
     String modifyColumnQuery(Column column, ColumnDiff... columnDiffs);
 
     String dropColumnQuery(Column column);
+
+    String renameColumnQuery(Column column, String newName);
 
     String createColumnCommentQuery(Column column);
 

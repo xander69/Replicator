@@ -57,7 +57,6 @@ public class MainController {
     @FXML
     public Button buttonUpdateTarget;
 
-
     @Setter
     private Scene scene;
 

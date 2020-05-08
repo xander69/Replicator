@@ -50,6 +50,11 @@ public class HsqldbDialect extends AbstractDialect {
     }
 
     @Override
+    public String renameTableQuery(Table table, String newName) {
+        return null;
+    }
+
+    @Override
     public String createColumnQuery(Column column) {
         return null;
     }
@@ -61,6 +66,11 @@ public class HsqldbDialect extends AbstractDialect {
 
     @Override
     public String dropColumnQuery(Column column) {
+        return null;
+    }
+
+    @Override
+    public String renameColumnQuery(Column column, String newName) {
         return null;
     }
 
