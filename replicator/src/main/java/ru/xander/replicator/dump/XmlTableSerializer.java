@@ -135,8 +135,12 @@ public class XmlTableSerializer implements TableSerializer {
             writer.writeAttribute("size", String.valueOf(column.getSize()));
             writer.writeAttribute("scale", String.valueOf(column.getScale()));
             writer.writeAttribute("nullable", String.valueOf(column.isNullable()));
-            writer.writeAttribute("default", column.getDefaultValue());
-            writer.writeAttribute("comment", column.getComment());
+            if (column.getDefaultValue() != null) {
+                writer.writeAttribute("default", column.getDefaultValue());
+            }
+            if (column.getComment() != null) {
+                writer.writeAttribute("comment", column.getComment());
+            }
             writer.writeEndElement();
         }
         indenter.write(2);

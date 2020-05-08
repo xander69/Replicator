@@ -2,6 +2,7 @@ package ru.xander.replicator.action;
 
 import ru.xander.replicator.compare.CompareDiff;
 import ru.xander.replicator.compare.CompareKind;
+import ru.xander.replicator.compare.CompareOptions;
 import ru.xander.replicator.compare.CompareResult;
 import ru.xander.replicator.compare.CompareResultType;
 import ru.xander.replicator.schema.CheckConstraint;
@@ -41,8 +42,9 @@ public class CompareAction implements Action {
     private final SchemaConfig sourceConfig;
     private final SchemaConfig targetConfig;
     private final String[] tables;
+    private final CompareOptions options;
 
-    public CompareAction(SchemaConfig sourceConfig, SchemaConfig targetConfig, String[] tables) {
+    public CompareAction(SchemaConfig sourceConfig, SchemaConfig targetConfig, String[] tables, CompareOptions options) {
         Objects.requireNonNull(sourceConfig, "Configure source schema");
         Objects.requireNonNull(targetConfig, "Configure target schema");
         Objects.requireNonNull(tables, "Tables for compare");
@@ -52,6 +54,7 @@ public class CompareAction implements Action {
         this.sourceConfig = sourceConfig;
         this.targetConfig = targetConfig;
         this.tables = tables;
+        this.options = options;
         this.executorService = Executors.newFixedThreadPool(2);
     }
 
@@ -148,15 +151,20 @@ public class CompareAction implements Action {
                                     dialect -> dialect.modifyColumnQuery(sourceColumn, ColumnDiff.MANDATORY));
                             break;
                         case DEFAULT:
-                            diffCollector.add(
-                                    CompareKind.COLUMN_DEFAULT,
-                                    sourceColumn.getDefaultValue(),
-                                    targetColumn.getDefaultValue(),
-                                    dialect -> dialect.modifyColumnQuery(sourceColumn, ColumnDiff.DEFAULT));
+                            if (!options.isSkipDefaults()) {
+                                diffCollector.add(
+                                        CompareKind.COLUMN_DEFAULT,
+                                        sourceColumn.getDefaultValue(),
+                                        targetColumn.getDefaultValue(),
+                                        dialect -> dialect.modifyColumnQuery(sourceColumn, ColumnDiff.DEFAULT));
+                            }
                             break;
                     }
                 }
-                if (!StringUtils.equalsStringIgnoreWhiteSpace(sourceColumn.getComment(), targetColumn.getComment())) {
+                if (
+                        !StringUtils.equalsStringIgnoreWhiteSpace(sourceColumn.getComment(), targetColumn.getComment())
+                                && !options.isSkipComments()
+                ) {
                     diffCollector.add(
                             CompareKind.COLUMN_COMMENT,
                             sourceColumn.getComment(),
