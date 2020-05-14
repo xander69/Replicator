@@ -53,7 +53,7 @@ public class Table {
         if (columnMap == null) {
             return Collections.emptyMap();
         }
-        return columnMap;
+        return Collections.unmodifiableMap(columnMap);
     }
 
     public Collection<Column> getColumns() {
@@ -85,10 +85,18 @@ public class Table {
         if ((primaryKey != null) && StringUtils.arrayContains(primaryKey.getColumns(), column.getName())) {
             primaryKey = null;
         }
-        getImportedKeyMap().entrySet().removeIf(key -> StringUtils.arrayContains(key.getValue().getColumns(), column.getName()));
-        getExportedKeyMap().entrySet().removeIf(key -> StringUtils.arrayContains(key.getValue().getColumns(), column.getName()));
-        getCheckConstraintMap().entrySet().removeIf(key -> StringUtils.arrayContains(key.getValue().getColumns(), column.getName()));
-        getIndexMap().entrySet().removeIf(index -> StringUtils.arrayContains(index.getValue().getColumns(), column.getName()));
+        getImportedKeys().stream()
+                .filter(key -> StringUtils.arrayContains(key.getColumns(), column.getName()))
+                .forEach(this::removeImportedKey);
+        getExportedKeys().stream()
+                .filter(key -> StringUtils.arrayContains(key.getColumns(), column.getName()))
+                .forEach(this::removeExportedKey);
+        getCheckConstraints().stream()
+                .filter(key -> StringUtils.arrayContains(key.getColumns(), column.getName()))
+                .forEach(this::removeCheckConstraint);
+        getIndices().stream()
+                .filter(key -> StringUtils.arrayContains(key.getColumns(), column.getName()))
+                .forEach(this::removeIndex);
     }
 
     public PrimaryKey getPrimaryKey() {
@@ -103,7 +111,7 @@ public class Table {
         if (importedKeyMap == null) {
             return Collections.emptyMap();
         }
-        return importedKeyMap;
+        return Collections.unmodifiableMap(importedKeyMap);
     }
 
     public Collection<ImportedKey> getImportedKeys() {
@@ -138,7 +146,7 @@ public class Table {
         if (exportedKeyMap == null) {
             return Collections.emptyMap();
         }
-        return exportedKeyMap;
+        return Collections.unmodifiableMap(exportedKeyMap);
     }
 
     public Collection<ExportedKey> getExportedKeys() {
@@ -173,7 +181,7 @@ public class Table {
         if (checkConstraintMap == null) {
             return Collections.emptyMap();
         }
-        return checkConstraintMap;
+        return Collections.unmodifiableMap(checkConstraintMap);
     }
 
     public Collection<CheckConstraint> getCheckConstraints() {
@@ -208,7 +216,7 @@ public class Table {
         if (indexMap == null) {
             return Collections.emptyMap();
         }
-        return indexMap;
+        return Collections.unmodifiableMap(indexMap);
     }
 
     public Collection<Index> getIndices() {
@@ -243,7 +251,7 @@ public class Table {
         if (triggerMap == null) {
             return Collections.emptyMap();
         }
-        return triggerMap;
+        return Collections.unmodifiableMap(triggerMap);
     }
 
     public Collection<Trigger> getTriggers() {
